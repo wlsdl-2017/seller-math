@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>쇼핑몰 순이익·마진율·정산액 정밀 계산기 | SELLER MATH</title>
+  <meta name="description" content="플랫폼 정산 예정액과 실제 영업 추정 이익, 부가세(VAT) 포함/제외 손익, 쿠폰 부담 주체별 매출, 월간 예상 순이익을 정밀하게 계산하는 무료 셀러 마진 계산기입니다.">
+  <link rel="canonical" href="https://seller-math.pages.dev/profit-calculator">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="쇼핑몰 순이익·마진율·정산액 정밀 계산기 | SELLER MATH">
+  <meta property="og:description" content="1단계 플랫폼 정산 내역과 2단계 셀러 손익 내역을 분리해 정산액 착시를 막아주는 쇼핑몰 순이익·VAT 계산기.">
+  <meta property="og:url" content="https://seller-math.pages.dev/profit-calculator">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SELLER MATH 쇼핑몰 순이익·마진율·정산액 계산기",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "ko",
+    "url": "https://seller-math.pages.dev/profit-calculator",
+    "description": "쿠폰 부담 주체, 수수료 부과 기준 4종, 항목별 부가세 포함 및 매입세액 공제 기준을 반영해 플랫폼 정산 예정액과 셀러 영업이익을 산출하는 무료 웹 계산기입니다.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "KRW"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-title">SELLER MATH</span>
+        <span class="brand-sub">쇼핑몰 셀러 정산·마진·ROAS 통합 회계 엔진</span>
+      </a>
+      <nav class="main-nav" aria-label="주 메뉴">
+        <a class="nav-link" href="index.html">종합 대시보드</a>
+        <a class="nav-link active" href="profit-calculator.html">순이익·정산 계산기</a>
+        <a class="nav-link" href="roas-calculator.html">손익분기 ROAS</a>
+        <a class="nav-link" href="selling-price-calculator.html">판매가 역산기</a>
+        <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="container">
+      <section class="hero-card">
+        <span class="hero-eyebrow">계산기 01 · 2단계 정산·손익 분리</span>
+        <h1>쇼핑몰 순이익 · 마진율 · 정산액 정밀 계산기</h1>
+        <p class="hero-desc">
+          플랫폼이 통장에 입금하는 정산 예정액과 상품 원가·택배비·광고비를 뺀 실제 영업이익, 그리고 세무 참고용 부가세 추정액을 명확히 분리해 산출합니다.
+        </p>
+      </section>
+
+      <aside class="ad-slot ad-slot-banner" aria-label="상단 광고 영역">
+        <span>광고 영역 (승인 후 애드센스 / 애드핏 배너 코드 삽입 위치 · CLS 방지 높이 확보)</span>
+      </aside>
+
+      <div class="workspace-grid">
+        <!-- 좌측 입력 패널 -->
+        <section class="card" aria-label="수익 계산 입력 폼">
+          <div class="scenario-toolbar">
+            <h2 class="card-title">판매 · 비용 조건 입력</h2>
+            <div class="btn-row">
+              <button type="button" class="btn btn-ghost" id="btn-reset-default">기본값(30,000원)</button>
+            </div>
+          </div>
+
+          <form id="profit-form" novalidate>
+            <div class="form-section-label">1. 상품 가격 및 쿠폰 부담</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="itemName">상품명 / 메모 (시나리오 저장용)</label>
+                <input id="itemName" name="itemName" type="text" class="input-control" maxlength="80" placeholder="예: 여름 린넨 셔츠">
+              </div>
+              <div class="field">
+                <label for="listPrice">등록 정가 (원)</label>
+                <input id="listPrice" name="listPrice" type="number" min="0" step="10" class="input-control">
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="sellerDiscount">판매자 부담 할인액 (원)</label>
+                  <input id="sellerDiscount" name="sellerDiscount" type="number" min="0" step="10" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="platformDiscount">플랫폼 부담 쿠폰 (원)</label>
+                  <input id="platformDiscount" name="platformDiscount" type="number" min="0" step="10" class="input-control">
+                </div>
+              </div>
+              <label class="checkbox-row">
+                <input id="platformSubsidyReimbursed" name="platformSubsidyReimbursed" type="checkbox">
+                <span>플랫폼 쿠폰 지원금을 정산 시 판매자에게 보전함</span>
+              </label>
+            </div>
+
+            <div class="form-section-label">2. 매입 원가 · 배송비 · 마켓 수수료</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="cogs">상품 매입 원가 COGS (원)</label>
+                <input id="cogs" name="cogs" type="number" min="0" step="10" class="input-control">
+              </div>
+              <div class="field">
+                <label for="feeBasisMode">수수료 부과 기준</label>
+                <select id="feeBasisMode" name="feeBasisMode" class="select-control">
+                  <option value="seller_revenue">① 판매자 귀속 상품 매출 비례</option>
+                  <option value="customer_payment">② 고객 실결제가 비례</option>
+                  <option value="total_payment_with_shipping">③ 배송비 포함 결제금액 비례</option>
+                  <option value="custom_basis">④ 직접 입력 수수료 기준</option>
+                </select>
+              </div>
+              <div class="form-grid-2" id="standard-fee-rate-wrap">
+                <div class="field">
+                  <label for="feeRate">마켓 판매 수수료율 (%)</label>
+                  <input id="feeRate" name="feeRate" type="number" min="0" max="100" step="0.01" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="shippingFeeRate">배송비 별도 수수료율 (%)</label>
+                  <input id="shippingFeeRate" name="shippingFeeRate" type="number" min="0" max="100" step="0.01" class="input-control">
+                </div>
+              </div>
+
+              <div class="form-grid-2" id="custom-fee-wrap" hidden>
+                <div class="field">
+                  <label for="customFeeMode">직접 입력 방식</label>
+                  <select id="customFeeMode" name="customFeeMode" class="select-control">
+                    <option value="fixed_fee">고정 수수료 금액 (원)</option>
+                    <option value="custom_base_rate">직접 기준금액 × 수수료율(%)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="customFeeBase" id="customFeeBaseLabel">직접 수수료 금액 / 기준금액 (원)</label>
+                  <input id="customFeeBase" name="customFeeBase" type="number" min="0" step="10" class="input-control">
+                </div>
+              </div>
+
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="customerShipping">고객 결제 배송비 (원)</label>
+                  <input id="customerShipping" name="customerShipping" type="number" min="0" step="10" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="sellerShippingCost">판매자 실부담 택배 원가 (원)</label>
+                  <input id="sellerShippingCost" name="sellerShippingCost" type="number" min="0" step="10" class="input-control">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section-label">3. 광고비 및 월간 판매량 가정</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="adSpend">건당 광고비 (원)</label>
+                <input id="adSpend" name="adSpend" type="number" min="0" step="10" class="input-control">
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="dailyVolume">일일 예상 판매량 (건)</label>
+                  <input id="dailyVolume" name="dailyVolume" type="number" min="0" step="1" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="monthlyDays">월 영업일수 (일)</label>
+                  <input id="monthlyDays" name="monthlyDays" type="number" min="0" step="1" class="input-control">
+                </div>
+              </div>
+            </div>
+
+            <!-- 고급 설정: VAT 포함/제외, 매입세액 공제, 과세유형 -->
+            <details class="advanced-panel" id="advanced-vat-panel">
+              <summary>고급 설정 (VAT 포함/공급가액 손익 기준 · 매입세액 공제 · 과세유형)</summary>
+              <div class="advanced-inner">
+                <div class="form-grid" style="margin-top: 10px;">
+                  <div class="field">
+                    <label for="accountingBasis">손익 계산 회계 기준</label>
+                    <select id="accountingBasis" name="accountingBasis" class="select-control">
+                      <option value="cash_basis">VAT 포함 현금 기준 (실제 통장 입출금)</option>
+                      <option value="supply_basis">공급가액 손익 기준 (공제 가능 부가세 제외)</option>
+                    </select>
+                    <span class="field-help">공급가액 손익 기준 선택 시 적격증빙 공제 가능 항목의 부가세 10%는 영업비용에서 중복 차감하지 않습니다.</span>
+                  </div>
+
+                  <div class="field">
+                    <label for="taxpayerType">사업자 과세 유형 (참고용 부가세 추정)</label>
+                    <select id="taxpayerType" name="taxpayerType" class="select-control">
+                      <option value="general">일반과세자</option>
+                      <option value="simplified">간이과세자</option>
+                      <option value="exempt">면세사업자</option>
+                    </select>
+                  </div>
+
+                  <div class="form-grid-2" id="simplified-tax-fields" hidden>
+                    <div class="field">
+                      <label for="simplifiedValueAddedRate">간이과세 업종별 부가가치율 (%)</label>
+                      <select id="simplifiedValueAddedRate" name="simplifiedValueAddedRate" class="select-control">
+                        <option value="">미선택 (필수 입력 전 계산 보류)</option>
+                        <option value="15">소매업·전기/가스/증기 (15%)</option>
+                        <option value="20">제조업·농임어업·소화물운송 (20%)</option>
+                        <option value="25">건설업·부동산임대 (25%)</option>
+                        <option value="30">음식점업·숙박업·운수창고통신 (30%)</option>
+                        <option value="40">기타 서비스업 (40%)</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="simplifiedInputCreditRate">세금계산서 매입 공제율 (%)</label>
+                      <input id="simplifiedInputCreditRate" name="simplifiedInputCreditRate" type="number" min="0" max="10" step="0.1" class="input-control">
+                    </div>
+                  </div>
+                </div>
+
+                <table class="vat-item-table" aria-label="항목별 VAT 설정">
+                  <thead>
+                    <tr>
+                      <th>항목</th>
+                      <th>VAT(10%) 포함 입력</th>
+                      <th>적격증빙 매입세액 공제</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>매출(판매가·배송비)</td>
+                      <td><input id="revenueVatIncluded" name="revenueVatIncluded" type="checkbox" aria-label="매출 VAT 포함 입력"></td>
+                      <td><span class="field-help">매출세액 기준</span></td>
+                    </tr>
+                    <tr>
+                      <td>상품 원가 (COGS)</td>
+                      <td><input id="cogsVatIncluded" name="cogsVatIncluded" type="checkbox" aria-label="원가 VAT 포함 입력"></td>
+                      <td><input id="cogsVatDeductible" name="cogsVatDeductible" type="checkbox" aria-label="원가 매입세액 공제"></td>
+                    </tr>
+                    <tr>
+                      <td>마켓 수수료</td>
+                      <td><input id="feeVatIncluded" name="feeVatIncluded" type="checkbox" aria-label="수수료 VAT 포함 입력"></td>
+                      <td><input id="feeVatDeductible" name="feeVatDeductible" type="checkbox" aria-label="수수료 매입세액 공제"></td>
+                    </tr>
+                    <tr>
+                      <td>판매자 택배 원가</td>
+                      <td><input id="shippingVatIncluded" name="shippingVatIncluded" type="checkbox" aria-label="배송원가 VAT 포함 입력"></td>
+                      <td><input id="shippingVatDeductible" name="shippingVatDeductible" type="checkbox" aria-label="배송원가 매입세액 공제"></td>
+                    </tr>
+                    <tr>
+                      <td>건당 광고비</td>
+                      <td><input id="adVatIncluded" name="adVatIncluded" type="checkbox" aria-label="광고비 VAT 포함 입력"></td>
+                      <td><input id="adVatDeductible" name="adVatDeductible" type="checkbox" aria-label="광고비 매입세액 공제"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          </form>
+
+          <div class="btn-row" style="margin-top: 16px;">
+            <button type="button" class="btn btn-primary" id="btn-save-scenario">시나리오 비교함에 저장</button>
+            <button type="button" class="btn btn-outline" id="btn-copy-summary">계산 요약 복사</button>
+            <button type="button" class="btn btn-ghost" id="btn-print-page">인쇄 / PDF 저장</button>
+          </div>
+          <div id="action-toast" class="toast-msg" aria-live="polite"></div>
+        </section>
+
+        <!-- 우측 결과 패널 -->
+        <div>
+          <section class="card" aria-label="계산 결과 요약">
+            <h2 class="card-title">수익 분석 핵심 지표</h2>
+            <p class="card-subtitle">모든 지표는 단일 공통 회계 엔진에서 실시간으로 산출됩니다.</p>
+            <div id="profit-kpi-grid" class="kpi-grid"></div>
+
+            <!-- 월간 예상 정산액 및 순이익 계산기 -->
+            <div class="chart-container" id="monthly-sim-box">
+              <h3 class="section-subtitle" style="margin-bottom: 10px;">월간 예상 정산액 및 순이익 시뮬레이션</h3>
+              <div id="monthly-kpi-grid" class="kpi-grid" style="margin-bottom: 0;"></div>
+            </div>
+          </section>
+
+          <section class="card" aria-label="2단계 Waterfall 수익 상세 내역">
+            <h2 class="card-title">2단계 수익 계산 과정 상세 내역 (Waterfall Breakdown)</h2>
+            <p class="card-subtitle">플랫폼 정산 예정액과 셀러 실질 손익, 세무 참고 부가세 추정치를 한눈에 대조할 수 있습니다.</p>
+            <div id="waterfall-container"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 시나리오 비교 및 CSV 내보내기 -->
+      <section class="card" aria-label="저장된 상품 시나리오 비교">
+        <div id="scenario-container"></div>
+      </section>
+
+      <!-- 본문 중간 광고 슬롯 -->
+      <aside class="ad-slot ad-slot-incontent" aria-label="본문 광고 영역">
+        <span>광고 영역 (승인 후 애드센스 반응형 / 애드핏 코드 삽입 위치 · CLS 방지)</span>
+      </aside>
+
+      <!-- Phase 3: 애드센스 승인용 독창적 실전 케이스 스터디 -->
+      <article class="article-section">
+        <h2>실전 케이스 스터디: 33,000원(VAT 포함) 상품 정산 vs 손익 vs 부가세 3단 해부</h2>
+        <p>
+          많은 초보 셀러가 "33,000원에 팔고 원가가 11,000원, 수수료 10%(3,300원), 택배비 3,300원, 광고비 3,300원이면 12,100원이 전부 내 순이익이다"라고 계산합니다.
+          하지만 일반과세자 기준으로는 통장에 남아 있는 현금 12,100원 안에 추후 세무서에 납부해야 할 부가가치세가 섞여 있습니다.
+          아래 버튼으로 해당 사례를 계산기에 즉시 불러와 숫자를 직접 대조해 보세요.
+        </p>
+        <div class="btn-row" style="margin-bottom: 14px;">
+          <button type="button" class="btn btn-secondary" id="btn-apply-33k-case">위 33,000원 케이스 스터디 값 계산기에 즉시 적용하기</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>항목 (적격증빙 세금계산서 수취 가정)</th>
+                <th class="num">1. 플랫폼 정산 기준</th>
+                <th class="num">2. VAT 포함 현금 흐름</th>
+                <th class="num">3. 공급가액 손익 기준</th>
+                <th class="num">예상 부가세 (10%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>판매 매출 (고객 결제 33,000원)</td>
+                <td class="num">33,000원</td>
+                <td class="num">33,000원</td>
+                <td class="num">30,000원</td>
+                <td class="num">+3,000원 (매출세액)</td>
+              </tr>
+              <tr>
+                <td>(-) 마켓 수수료 (10%)</td>
+                <td class="num text-negative">-3,300원</td>
+                <td class="num text-negative">-3,300원</td>
+                <td class="num text-negative">-3,000원</td>
+                <td class="num text-positive">-300원 (매입세액)</td>
+              </tr>
+              <tr class="row-highlight">
+                <td>(=) 플랫폼 통장 정산 예정액</td>
+                <td class="num">29,700원</td>
+                <td class="num">-</td>
+                <td class="num">-</td>
+                <td class="num">-</td>
+              </tr>
+              <tr>
+                <td>(-) 상품 매입 원가 (COGS)</td>
+                <td class="num">차감 안 됨</td>
+                <td class="num text-negative">-11,000원</td>
+                <td class="num text-negative">-10,000원</td>
+                <td class="num text-positive">-1,000원 (매입세액)</td>
+              </tr>
+              <tr>
+                <td>(-) 판매자 부담 택배 원가</td>
+                <td class="num">차감 안 됨</td>
+                <td class="num text-negative">-3,300원</td>
+                <td class="num text-negative">-3,000원</td>
+                <td class="num text-positive">-300원 (매입세액)</td>
+              </tr>
+              <tr>
+                <td>(=) 광고 전 공헌이익 (C)</td>
+                <td class="num">-</td>
+                <td class="num">15,400원</td>
+                <td class="num">14,000원</td>
+                <td class="num">+1,400원</td>
+              </tr>
+              <tr>
+                <td>(-) 건당 광고비 지출</td>
+                <td class="num">차감 안 됨</td>
+                <td class="num text-negative">-3,300원</td>
+                <td class="num text-negative">-3,000원</td>
+                <td class="num text-positive">-300원 (매입세액)</td>
+              </tr>
+              <tr class="row-highlight">
+                <td>(=) 최종 이익 / 납부 부가세 추정</td>
+                <td class="num">정산액 29,700원</td>
+                <td class="num text-positive">현금 잔액 12,100원</td>
+                <td class="num text-positive">영업이익 11,000원</td>
+                <td class="num text-negative">납부세액 1,100원</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>핵심 인사이트: 현금 잔액(12,100원) - 예상 부가세(1,100원) = 실질 영업이익(11,000원)</h3>
+        <p>
+          위 표에서 보듯 현금 기준 잔액 12,100원과 공급가액 기준 실질 영업이익 11,000원의 차이인 <strong>1,100원</strong>은 정확히 매출세액(3,000원)에서 매입세액 합계(1,900원)를 뺀 납부 예정 부가가치세입니다.
+          만약 상품 매입 원가 11,000원에 대해 세금계산서를 받지 않고 무자료 현금 사입했다면 매입세액 1,000원을 공제받지 못하므로 납부 부가세는 2,100원으로 늘어나고, 실질 이익은 10,000원으로 하락합니다.
+        </p>
+
+        <h3>반품 1건 발생 시 왕복 배송비 손실 분석: 정상 판매 몇 건의 이익을 상쇄할까?</h3>
+        <p>
+          무료배송 조건으로 판매하던 위 33,000원 상품에서 판매자 귀책 사유(또는 무료반품 이벤트)로 반품이 1건 발생했다고 가정해 보겠습니다.
+          초도 발송 택배비 3,300원과 회수 택배비 3,300원을 합산한 <strong>왕복 배송비 6,600원(공급가액 6,000원)</strong>이 즉시 현금 손실로 발생합니다.
+          여기에 이미 지출해 회수할 수 없는 건당 광고비 3,300원(공급가액 3,000원)과 포장 부자재·검수 인건비 약 1,100원까지 더하면 <strong>반품 1건의 총 매몰 손실은 약 11,000원(공급가액 약 10,000원)</strong>에 달합니다.
+        </p>
+        <p>
+          즉, 건당 실질 영업이익이 11,000원인 위 상품에서조차 <strong>반품 1건이 발생하면 정상 판매 1건에서 벌어들인 순이익 전체(100%)가 그대로 증발</strong>합니다.
+          만약 순마진율이 10% 내외(건당 순이익 3,000원)인 저마진 상품이었다면 왕복 배송비 6,600원 + 광고비 3,300원 손실(9,900원)을 메우기 위해 <strong>정상 판매 3.3건 이상을 추가로 팔아야 겨우 본전</strong>을 회복할 수 있습니다.
+          따라서 반품률이 높은 의류·잡화 카테고리는 반드시 예상 반품률과 왕복 배송비를 원가 또는 배송원가 항목에 반영해 마진 방어선을 확인해야 합니다.
+        </p>
+      </article>
+
+      <!-- FAQ -->
+      <section class="article-section" aria-label="자주 묻는 질문">
+        <h2>자주 묻는 질문 (FAQ)</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>원가나 매출이 0원일 때 왜 ROI와 순마진율이 '산출 불가'로 표시되나요?</summary>
+            <p>
+              마진율은 이익을 매출로 나눈 비율이고, ROI(투자수익률)는 이익을 투하 원가(COGS)로 나눈 비율입니다.
+              분모가 0원 이하일 때 억지로 0%나 무한대(Infinity)를 출력하면 의사결정을 왜곡하므로, 매출 0원 시 마진율과 원가 0원 시 ROI를 각각 산출 불가로 안전하게 표시합니다.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>간이과세자인데 예상 부가세 금액이 바로 나오지 않는 이유는 무엇인가요?</summary>
+            <p>
+              간이과세자는 업종별 부가가치율(15%~40%)과 적격증빙(세금계산서 등) 수취 비율에 따라 납부세액 계산 구조가 일반과세자와 완전히 다릅니다.
+              필수 입력 항목인 업종별 부가가치율을 선택하지 않은 상태에서 임의의 세액을 보여드리는 것은 부정확한 정보 제공이 되므로, 고급 설정에서 업종별 부가가치율을 선택하실 때까지 계산을 보류하고 안내 문구를 표시합니다.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>입력한 판매가와 원가 데이터는 서버에 저장되나요?</summary>
+            <p>
+              아니요. SELLER MATH는 100% 정적 웹사이트로 서버 데이터베이스를 사용하지 않습니다. 모든 계산은 사용자의 브라우저 내부에서 실행되며, 편리한 화면 이동을 위해 마지막 숫자 설정값만 브라우저 <code>localStorage</code>에 보관합니다.
+            </p>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>SELLER MATH</strong> — 쇼핑몰 셀러 정산·마진·ROAS·판매가 역산 무료 웹 도구<br>
+        <span>본 계산 결과는 참고용 추정치이며 실제 플랫폼 정산서 및 세무사 확정 신고와 다를 수 있습니다.</span>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">종합 대시보드</a>
+        <a href="roas-calculator.html">ROAS 계산기</a>
+        <a href="selling-price-calculator.html">판매가 역산기</a>
+        <a href="legal.html">개인정보처리방침·이용약관·면책고지</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="common.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var SM = window.SellerMath;
+      var form = document.getElementById('profit-form');
+      var kpiGrid = document.getElementById('profit-kpi-grid');
+      var monthlyGrid = document.getElementById('monthly-kpi-grid');
+      var waterfallContainer = document.getElementById('waterfall-container');
+      var scenarioContainer = document.getElementById('scenario-container');
+      var toastEl = document.getElementById('action-toast');
+
+      var customFeeWrap = document.getElementById('custom-fee-wrap');
+      var standardFeeRateWrap = document.getElementById('standard-fee-rate-wrap');
+      var simplifiedFields = document.getElementById('simplified-tax-fields');
+
+      var lastResult = null;
+
+      var NUMERIC_FIELDS = [
+        'listPrice', 'sellerDiscount', 'platformDiscount', 'cogs',
+        'feeRate', 'customFeeBase', 'customerShipping', 'sellerShippingCost',
+        'shippingFeeRate', 'adSpend', 'dailyVolume', 'monthlyDays',
+        'simplifiedInputCreditRate'
+      ];
+      var CHECKBOX_FIELDS = [
+        'platformSubsidyReimbursed', 'revenueVatIncluded',
+        'cogsVatIncluded', 'cogsVatDeductible',
+        'feeVatIncluded', 'feeVatDeductible',
+        'shippingVatIncluded', 'shippingVatDeductible',
+        'adVatIncluded', 'adVatDeductible'
+      ];
+      var SELECT_FIELDS = [
+        'feeBasisMode', 'customFeeMode', 'accountingBasis', 'taxpayerType'
+      ];
+
+      function writeInputsToForm(inp) {
+        document.getElementById('itemName').value = inp.itemName || '';
+        NUMERIC_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) el.value = inp[key];
+        });
+        CHECKBOX_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) el.checked = Boolean(inp[key]);
+        });
+        SELECT_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) el.value = inp[key];
+        });
+        var simpEl = document.getElementById('simplifiedValueAddedRate');
+        if (simpEl) {
+          simpEl.value = inp.simplifiedValueAddedRate !== null ? String(inp.simplifiedValueAddedRate) : '';
+        }
+      }
+
+      function readInputsFromForm() {
+        var current = SM.loadSharedInputs();
+        current.itemName = document.getElementById('itemName').value;
+        NUMERIC_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) current[key] = el.value;
+        });
+        CHECKBOX_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) current[key] = el.checked;
+        });
+        SELECT_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) current[key] = el.value;
+        });
+        var simpVal = document.getElementById('simplifiedValueAddedRate').value;
+        current.simplifiedValueAddedRate = simpVal === '' ? null : Number(simpVal);
+        return SM.normalizeInputs(current);
+      }
+
+      function syncConditionalUi(inp) {
+        var isCustom = inp.feeBasisMode === 'custom_basis';
+        customFeeWrap.hidden = !isCustom;
+        if (isCustom && inp.customFeeMode === 'fixed_fee') {
+          document.getElementById('feeRate').disabled = true;
+          document.getElementById('customFeeBaseLabel').textContent = '고정 수수료 금액 (원)';
+        } else {
+          document.getElementById('feeRate').disabled = false;
+          document.getElementById('customFeeBaseLabel').textContent = '직접 입력 수수료 기준금액 (원)';
+        }
+        simplifiedFields.hidden = inp.taxpayerType !== 'simplified';
+      }
+
+      function renderResults() {
+        var inp = readInputsFromForm();
+        SM.saveSharedInputs(inp);
+        syncConditionalUi(inp);
+
+        var res = SM.calculateProfit(inp);
+        lastResult = res;
+
+        // KPI Cards
+        SM.clearEl(kpiGrid);
+        var kpis = [
+          {
+            label: '플랫폼 정산 예정액 (1단계)',
+            value: SM.formatCurrency(res.platformSettlement),
+            sub: '통장 입금 예정 (원가·배송원가·광고 전)',
+            cls: 'kpi-highlight'
+          },
+          {
+            label: '광고 전 공헌이익 (C)',
+            value: SM.formatCurrency(res.contributionMargin),
+            sub: '공헌이익률 ' + res.contributionMarginLabel,
+            cls: res.contributionMargin > 0 ? '' : 'kpi-negative'
+          },
+          {
+            label: '세금 미반영 영업 추정 이익',
+            value: SM.formatCurrency(res.operatingProfit),
+            sub: inp.accountingBasis === 'supply_basis' ? '공급가액 손익 기준' : 'VAT 포함 현금 기준',
+            cls: res.operatingProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
+          },
+          {
+            label: '순마진율 / 원가 대비 ROI',
+            value: res.netMarginLabel,
+            sub: 'ROI: ' + res.roiLabel,
+            cls: ''
+          }
+        ];
+
+        kpis.forEach(function (k) {
+          var card = SM.createEl('div', 'kpi-card ' + k.cls);
+          card.appendChild(SM.createEl('span', 'kpi-label', k.label));
+          card.appendChild(SM.createEl('strong', 'kpi-value', k.value));
+          card.appendChild(SM.createEl('span', 'kpi-sub', k.sub));
+          kpiGrid.appendChild(card);
+        });
+
+        // Monthly KPI Cards
+        SM.clearEl(monthlyGrid);
+        var mKpis = [
+          {
+            label: '월간 예상 판매량',
+            value: SM.formatNumber(res.monthlyUnits, 0) + '건',
+            sub: inp.dailyVolume + '건/일 × ' + inp.monthlyDays + '일',
+            cls: ''
+          },
+          {
+            label: '월간 예상 플랫폼 정산액',
+            value: SM.formatCurrency(res.monthlySettlement),
+            sub: '월 순매출 ' + SM.formatCurrency(res.monthlyRevenue),
+            cls: 'kpi-highlight'
+          },
+          {
+            label: '월간 총 광고비 지출',
+            value: SM.formatCurrency(res.monthlyAdSpend),
+            sub: '건당 ' + SM.formatCurrency(res.recognizedAdSpend),
+            cls: ''
+          },
+          {
+            label: '월간 예상 영업 추정 이익',
+            value: SM.formatCurrency(res.monthlyOperatingProfit),
+            sub: '월 공헌이익 ' + SM.formatCurrency(res.monthlyContributionMargin),
+            cls: res.monthlyOperatingProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
+          }
+        ];
+
+        mKpis.forEach(function (mk) {
+          var card = SM.createEl('div', 'kpi-card ' + mk.cls);
+          card.appendChild(SM.createEl('span', 'kpi-label', mk.label));
+          card.appendChild(SM.createEl('strong', 'kpi-value', mk.value));
+          card.appendChild(SM.createEl('span', 'kpi-sub', mk.sub));
+          monthlyGrid.appendChild(card);
+        });
+
+        // 2-Stage Waterfall Breakdown
+        SM.renderWaterfallBreakdown(waterfallContainer, res);
+      }
+
+      function refreshScenarios() {
+        var scenarios = SM.loadScenarios();
+        SM.renderScenarioTable(
+          scenarioContainer,
+          scenarios,
+          function (id) {
+            SM.deleteScenario(id);
+            refreshScenarios();
+            showToast('선택한 시나리오를 삭제했습니다.');
+          },
+          function (list) {
+            SM.exportScenariosToCsv(list, 'seller-math-profit-scenarios');
+            showToast('CSV 파일을 다운로드했습니다.');
+          },
+          function () {
+            SM.clearScenarios();
+            refreshScenarios();
+            showToast('저장된 시나리오를 모두 삭제했습니다.');
+          }
+        );
+      }
+
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        setTimeout(function () {
+          if (toastEl.textContent === msg) toastEl.textContent = '';
+        }, 3500);
+      }
+
+      form.addEventListener('input', renderResults);
+      form.addEventListener('change', renderResults);
+
+      document.getElementById('btn-reset-default').addEventListener('click', function () {
+        var def = SM.cloneDefaults();
+        SM.saveSharedInputs(def);
+        writeInputsToForm(def);
+        renderResults();
+        showToast('표준 테스트 값(30,000원 기준)으로 초기화했습니다.');
+      });
+
+      document.getElementById('btn-apply-33k-case').addEventListener('click', function () {
+        var case33 = Object.assign(SM.cloneDefaults(), {
+          itemName: '케이스 스터디 33,000원 상품 (VAT 포함)',
+          listPrice: 33000,
+          cogs: 11000,
+          feeRate: 10,
+          sellerShippingCost: 3300,
+          adSpend: 3300,
+          accountingBasis: 'supply_basis',
+          taxpayerType: 'general'
+        });
+        SM.saveSharedInputs(case33);
+        writeInputsToForm(case33);
+        document.getElementById('advanced-vat-panel').open = true;
+        renderResults();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('33,000원 케이스 스터디 조건이 계산기에 적용되었습니다.');
+      });
+
+      document.getElementById('btn-save-scenario').addEventListener('click', function () {
+        if (!lastResult) return;
+        SM.saveScenario(lastResult.inputs.itemName, lastResult);
+        refreshScenarios();
+        showToast('시나리오 비교함에 저장되었습니다.');
+      });
+
+      document.getElementById('btn-copy-summary').addEventListener('click', function () {
+        if (!lastResult) return;
+        var summaryText = [
+          '[SELLER MATH 수익 분석 요약]',
+          '상품명: ' + (lastResult.inputs.itemName || '미지정'),
+          '회계 기준: ' + lastResult.accountingBasisLabel,
+          '등록 정가: ' + SM.formatCurrency(lastResult.listPrice) + ' (실결제가: ' + SM.formatCurrency(lastResult.customerPayment) + ')',
+          '1단계 플랫폼 정산 예정액: ' + SM.formatCurrency(lastResult.platformSettlement),
+          '광고 전 공헌이익(C): ' + SM.formatCurrency(lastResult.contributionMargin),
+          '2단계 영업 추정 이익: ' + SM.formatCurrency(lastResult.operatingProfit),
+          '순마진율: ' + lastResult.netMarginLabel + ' / ROI: ' + lastResult.roiLabel,
+          '참고 부가세 추정(' + lastResult.taxEstimate.taxpayerLabel + '): ' + lastResult.taxEstimate.displayAmount
+        ].join('\n');
+
+        SM.copyTextToClipboard(summaryText).then(function (ok) {
+          showToast(ok ? '계산 요약을 클립보드에 복사했습니다.' : '복사에 실패했습니다. 브라우저 권한을 확인하세요.');
+        });
+      });
+
+      document.getElementById('btn-print-page').addEventListener('click', function () {
+        window.print();
+      });
+
+      writeInputsToForm(SM.loadSharedInputs());
+      renderResults();
+      refreshScenarios();
+    })();
+  </script>
+</body>
+</html>

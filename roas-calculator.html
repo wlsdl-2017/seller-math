@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>손익분기 ROAS · 최대 허용 광고비(CPA) 계산기 | SELLER MATH</title>
+  <meta name="description" content="순이익 계산기와 동일한 공헌이익 회계 엔진을 연동하여 적자가 나지 않는 손익분기 ROAS와 최대 허용 광고비(CPA), 목표 ROAS 구간별 예상 순이익을 계산합니다.">
+  <link rel="canonical" href="https://seller-math.pages.dev/roas-calculator">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="손익분기 ROAS · 최대 허용 광고비(CPA) 계산기 | SELLER MATH">
+  <meta property="og:description" content="판매가·원가·수수료·배송비·부가세 조건을 반영해 광고 손익분기 ROAS와 최대 허용 CPA를 정밀하게 산출합니다.">
+  <meta property="og:url" content="https://seller-math.pages.dev/roas-calculator">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SELLER MATH 손익분기 ROAS · 최대 허용 CPA 계산기",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "ko",
+    "url": "https://seller-math.pages.dev/roas-calculator",
+    "description": "공통 회계 엔진의 광고 전 공헌이익(C)을 기반으로 손익분기 ROAS와 최대 허용 CPA 한도를 산출하고 목표 ROAS별 순이익을 시뮬레이션하는 무료 웹 도구입니다.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "KRW"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-title">SELLER MATH</span>
+        <span class="brand-sub">쇼핑몰 셀러 정산·마진·ROAS 통합 회계 엔진</span>
+      </a>
+      <nav class="main-nav" aria-label="주 메뉴">
+        <a class="nav-link" href="index.html">종합 대시보드</a>
+        <a class="nav-link" href="profit-calculator.html">순이익·정산 계산기</a>
+        <a class="nav-link active" href="roas-calculator.html">손익분기 ROAS</a>
+        <a class="nav-link" href="selling-price-calculator.html">판매가 역산기</a>
+        <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="container">
+      <section class="hero-card">
+        <span class="hero-eyebrow">계산기 02 · 공헌이익(C) 100% 연동 광고 한도</span>
+        <h1>손익분기 ROAS · 최대 허용 광고비(CPA) 계산기</h1>
+        <p class="hero-desc">
+          단순 판매가 대비 마진이 아니라 원가·수수료·배송비·쿠폰·VAT 설정까지 모두 차감한 <strong>광고 전 공헌이익(C)</strong>을 기준으로 적자 없는 광고 하한선(손익분기 ROAS)을 산출합니다.
+        </p>
+      </section>
+
+      <aside class="ad-slot ad-slot-banner" aria-label="상단 광고 영역">
+        <span>광고 영역 (승인 후 애드센스 / 애드핏 배너 코드 삽입 위치 · CLS 방지 높이 확보)</span>
+      </aside>
+
+      <div class="workspace-grid">
+        <!-- 좌측 입력 패널 -->
+        <section class="card" aria-label="ROAS 계산 입력 폼">
+          <div class="scenario-toolbar">
+            <h2 class="card-title">상품 · 광고 기준 입력</h2>
+            <button type="button" class="btn btn-ghost" id="btn-reset-default">기본값(30,000원)</button>
+          </div>
+
+          <form id="roas-form" novalidate>
+            <div class="form-section-label">1. 광고 귀속 매출 및 가격 조건</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="adRevenueBasis">광고 플랫폼 매출 집계 기준 (R_ad)</label>
+                <select id="adRevenueBasis" name="adRevenueBasis" class="select-control">
+                  <option value="seller_revenue">판매자 귀속 상품 매출 (기본값)</option>
+                  <option value="customer_payment">고객 실결제가 (쿠폰 차감 후 상품가)</option>
+                  <option value="total_payment_with_shipping">배송비 포함 고객 총결제액</option>
+                  <option value="recognized_net_revenue">회계 기준 순매출 (공급가액/현금 반영)</option>
+                </select>
+                <span class="field-help">네이버·메타 광고관리자의 전환 매출 집계 기준과 일치하도록 선택하세요.</span>
+              </div>
+              <div class="field">
+                <label for="itemName">상품명 / 캠페인명</label>
+                <input id="itemName" name="itemName" type="text" class="input-control" maxlength="80" placeholder="예: 여름 린넨 셔츠 메타캠페인">
+              </div>
+              <div class="field">
+                <label for="listPrice">등록 정가 (원)</label>
+                <input id="listPrice" name="listPrice" type="number" min="0" step="10" class="input-control">
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="sellerDiscount">판매자 부담 할인액 (원)</label>
+                  <input id="sellerDiscount" name="sellerDiscount" type="number" min="0" step="10" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="platformDiscount">플랫폼 부담 쿠폰 (원)</label>
+                  <input id="platformDiscount" name="platformDiscount" type="number" min="0" step="10" class="input-control">
+                </div>
+              </div>
+              <label class="checkbox-row">
+                <input id="platformSubsidyReimbursed" name="platformSubsidyReimbursed" type="checkbox">
+                <span>플랫폼 쿠폰 지원금을 정산 시 판매자에게 보전함</span>
+              </label>
+            </div>
+
+            <div class="form-section-label">2. 원가 · 배송비 · 마켓 수수료</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="cogs">상품 매입 원가 COGS (원)</label>
+                <input id="cogs" name="cogs" type="number" min="0" step="10" class="input-control">
+              </div>
+              <div class="field">
+                <label for="feeBasisMode">수수료 부과 기준</label>
+                <select id="feeBasisMode" name="feeBasisMode" class="select-control">
+                  <option value="seller_revenue">① 판매자 귀속 상품 매출 비례</option>
+                  <option value="customer_payment">② 고객 실결제가 비례</option>
+                  <option value="total_payment_with_shipping">③ 배송비 포함 결제금액 비례</option>
+                  <option value="custom_basis">④ 직접 입력 수수료 기준</option>
+                </select>
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="feeRate">마켓 판매 수수료율 (%)</label>
+                  <input id="feeRate" name="feeRate" type="number" min="0" max="100" step="0.01" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="shippingFeeRate">배송비 별도 수수료율 (%)</label>
+                  <input id="shippingFeeRate" name="shippingFeeRate" type="number" min="0" max="100" step="0.01" class="input-control">
+                </div>
+              </div>
+              <div class="form-grid-2" id="custom-fee-wrap" hidden>
+                <div class="field">
+                  <label for="customFeeMode">직접 입력 방식</label>
+                  <select id="customFeeMode" name="customFeeMode" class="select-control">
+                    <option value="fixed_fee">고정 수수료 금액 (원)</option>
+                    <option value="custom_base_rate">직접 기준금액 × 수수료율(%)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="customFeeBase" id="customFeeBaseLabel">직접 수수료 금액 / 기준금액 (원)</label>
+                  <input id="customFeeBase" name="customFeeBase" type="number" min="0" step="10" class="input-control">
+                </div>
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="customerShipping">고객 결제 배송비 (원)</label>
+                  <input id="customerShipping" name="customerShipping" type="number" min="0" step="10" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="sellerShippingCost">판매자 실부담 택배 원가 (원)</label>
+                  <input id="sellerShippingCost" name="sellerShippingCost" type="number" min="0" step="10" class="input-control">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section-label">3. 현재 집행 건당 광고비 · 월간 판매량</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="adSpend">현재 건당 광고비 CPA (원)</label>
+                <input id="adSpend" name="adSpend" type="number" min="0" step="10" class="input-control">
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="dailyVolume">일일 예상 판매량 (건)</label>
+                  <input id="dailyVolume" name="dailyVolume" type="number" min="0" step="1" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="monthlyDays">월 영업일수 (일)</label>
+                  <input id="monthlyDays" name="monthlyDays" type="number" min="0" step="1" class="input-control">
+                </div>
+              </div>
+            </div>
+
+            <!-- 고급 VAT 설정 -->
+            <details class="advanced-panel" id="advanced-vat-panel">
+              <summary>고급 설정 (VAT 포함/공급가액 손익 기준 · 매입세액 공제 · 과세유형)</summary>
+              <div class="advanced-inner">
+                <div class="form-grid" style="margin-top: 10px;">
+                  <div class="field">
+                    <label for="accountingBasis">손익 계산 회계 기준</label>
+                    <select id="accountingBasis" name="accountingBasis" class="select-control">
+                      <option value="cash_basis">VAT 포함 현금 기준 (실제 통장 입출금)</option>
+                      <option value="supply_basis">공급가액 손익 기준 (공제 가능 부가세 제외)</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="taxpayerType">사업자 과세 유형</label>
+                    <select id="taxpayerType" name="taxpayerType" class="select-control">
+                      <option value="general">일반과세자</option>
+                      <option value="simplified">간이과세자</option>
+                      <option value="exempt">면세사업자</option>
+                    </select>
+                  </div>
+                  <div class="form-grid-2" id="simplified-tax-fields" hidden>
+                    <div class="field">
+                      <label for="simplifiedValueAddedRate">간이과세 업종별 부가가치율 (%)</label>
+                      <select id="simplifiedValueAddedRate" name="simplifiedValueAddedRate" class="select-control">
+                        <option value="">미선택 (필수 입력 전 계산 보류)</option>
+                        <option value="15">소매업·전기/가스/증기 (15%)</option>
+                        <option value="20">제조업·농임어업·소화물운송 (20%)</option>
+                        <option value="25">건설업·부동산임대 (25%)</option>
+                        <option value="30">음식점업·숙박업·운수창고통신 (30%)</option>
+                        <option value="40">기타 서비스업 (40%)</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="simplifiedInputCreditRate">세금계산서 매입 공제율 (%)</label>
+                      <input id="simplifiedInputCreditRate" name="simplifiedInputCreditRate" type="number" min="0" max="10" step="0.1" class="input-control">
+                    </div>
+                  </div>
+                </div>
+                <table class="vat-item-table" aria-label="항목별 VAT 설정">
+                  <thead>
+                    <tr>
+                      <th>항목</th>
+                      <th>VAT(10%) 포함 입력</th>
+                      <th>적격증빙 매입세액 공제</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>매출(판매가·배송비)</td>
+                      <td><input id="revenueVatIncluded" name="revenueVatIncluded" type="checkbox"></td>
+                      <td><span class="field-help">매출세액 기준</span></td>
+                    </tr>
+                    <tr>
+                      <td>상품 원가 (COGS)</td>
+                      <td><input id="cogsVatIncluded" name="cogsVatIncluded" type="checkbox"></td>
+                      <td><input id="cogsVatDeductible" name="cogsVatDeductible" type="checkbox"></td>
+                    </tr>
+                    <tr>
+                      <td>마켓 수수료</td>
+                      <td><input id="feeVatIncluded" name="feeVatIncluded" type="checkbox"></td>
+                      <td><input id="feeVatDeductible" name="feeVatDeductible" type="checkbox"></td>
+                    </tr>
+                    <tr>
+                      <td>판매자 택배 원가</td>
+                      <td><input id="shippingVatIncluded" name="shippingVatIncluded" type="checkbox"></td>
+                      <td><input id="shippingVatDeductible" name="shippingVatDeductible" type="checkbox"></td>
+                    </tr>
+                    <tr>
+                      <td>건당 광고비</td>
+                      <td><input id="adVatIncluded" name="adVatIncluded" type="checkbox"></td>
+                      <td><input id="adVatDeductible" name="adVatDeductible" type="checkbox"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          </form>
+
+          <div class="btn-row" style="margin-top: 16px;">
+            <button type="button" class="btn btn-primary" id="btn-save-scenario">시나리오 비교함에 저장</button>
+            <button type="button" class="btn btn-outline" id="btn-copy-summary">ROAS 분석 복사</button>
+          </div>
+          <div id="action-toast" class="toast-msg" aria-live="polite"></div>
+        </section>
+
+        <!-- 우측 결과 패널 -->
+        <div>
+          <section class="card" aria-label="손익분기 ROAS 결과">
+            <h2 class="card-title">손익분기 ROAS · 최대 허용 광고비(CPA)</h2>
+            <p class="card-subtitle" id="roas-basis-desc">공헌이익(C)을 기준으로 적자가 나지 않는 최소 광고 효율을 계산합니다.</p>
+            <div id="roas-error-box" class="alert-box alert-danger" hidden></div>
+            <div id="roas-kpi-grid" class="kpi-grid"></div>
+          </section>
+
+          <section class="card" aria-label="목표 ROAS 구간별 시뮬레이션">
+            <h2 class="card-title">목표 ROAS 구간별 건당 예상 순이익 · 광고비 한도 비교</h2>
+            <p class="card-subtitle">광고 효율(ROAS)이 바뀔 때 건당 남는 순이익과 월간 추정 순이익 변화를 비교하세요.</p>
+            <div id="roas-sim-container"></div>
+          </section>
+
+          <section class="card" aria-label="2단계 Waterfall 수익 상세 내역">
+            <h2 class="card-title">공헌이익(C) 검증: 2단계 수익 계산 내역 (Waterfall Breakdown)</h2>
+            <p class="card-subtitle">순이익 계산기와 동일한 공통 회계 엔진이 산출한 공헌이익 및 정산 근거입니다.</p>
+            <div id="waterfall-container"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 시나리오 비교 -->
+      <section class="card" aria-label="저장된 상품 시나리오 비교">
+        <div id="scenario-container"></div>
+      </section>
+
+      <aside class="ad-slot ad-slot-incontent" aria-label="본문 광고 영역">
+        <span>광고 영역 (승인 후 애드센스 반응형 / 애드핏 코드 삽입 위치 · CLS 방지)</span>
+      </aside>
+
+      <!-- Phase 3: 애드센스 승인용 독창적 실전 케이스 스터디 -->
+      <article class="article-section">
+        <h2>실전 케이스 스터디: 마진율별 손익분기 ROAS 조견표와 CPA 인상의 치명적 레버리지</h2>
+        <p>
+          광고비를 쓸 때 "ROAS 300%면 잘 나오는 거 아닌가요?"라고 묻는 셀러가 많습니다. 하지만 <strong>ROAS 300%가 흑자인지 적자인지는 오직 상품의 '광고 전 공헌이익률(공헌이익 C ÷ 광고 귀속 매출)'에 달려 있습니다.</strong>
+          공헌이익률이 25%라면 ROAS 400%가 겨우 본전(손익분기)이므로, ROAS 300%는 팔면 팔수록 적자가 누적되는 구간입니다.
+        </p>
+
+        <h3>1. 공헌이익률 구간별 손익분기 ROAS 조견표</h3>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>광고 전 공헌이익률 (C / R_ad)</th>
+                <th class="num">판매가 30,000원 기준 공헌이익(C)</th>
+                <th class="num">최대 허용 CPA (손익분기)</th>
+                <th class="num">손익분기 ROAS (1 / 공헌이익률)</th>
+                <th>권장 운영 해석</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>10.00% (박리다매 구조)</td>
+                <td class="num">3,000원</td>
+                <td class="num">3,000원</td>
+                <td class="num text-negative">1,000.00%</td>
+                <td>유료 전환 광고 집행이 사실상 어려움 (자연 유입/재구매 필수)</td>
+              </tr>
+              <tr>
+                <td>15.00%</td>
+                <td class="num">4,500원</td>
+                <td class="num">4,500원</td>
+                <td class="num">666.67%</td>
+                <td>검색광고(브랜드 키워드) 위주 소극적 집행 권장</td>
+              </tr>
+              <tr>
+                <td>20.00%</td>
+                <td class="num">6,000원</td>
+                <td class="num">6,000원</td>
+                <td class="num">500.00%</td>
+                <td>목표 ROAS 650% 이상 유지 시 안정적 흑자 가능</td>
+              </tr>
+              <tr>
+                <td>25.00%</td>
+                <td class="num">7,500원</td>
+                <td class="num">7,500원</td>
+                <td class="num">400.00%</td>
+                <td>ROAS 400% 미만 하락 시 즉시 소재·타겟 점검 필요</td>
+              </tr>
+              <tr>
+                <td>30.00%</td>
+                <td class="num">9,000원</td>
+                <td class="num">9,000원</td>
+                <td class="num">333.33%</td>
+                <td>메타·네이버 쇼핑검색 등 확장 광고 운용 가능한 평균선</td>
+              </tr>
+              <tr>
+                <td>40.00%</td>
+                <td class="num">12,000원</td>
+                <td class="num">12,000원</td>
+                <td class="num text-positive">250.00%</td>
+                <td>높은 입찰 단가 경쟁에서도 생존 가능한 고마진 구조</td>
+              </tr>
+              <tr class="row-highlight">
+                <td>46.67% (표준 예시: 30,000원/C 14,000원)</td>
+                <td class="num">14,000원</td>
+                <td class="num">14,000원</td>
+                <td class="num text-positive">214.29%</td>
+                <td>건당 광고비 6,000원(ROAS 500%) 시 건당 8,000원 순이익 확보</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>2. 건당 광고비(CPA)가 3,000원에서 5,000원으로 오를 때 월간 순이익 변화</h3>
+        <p>
+          매출이 똑같이 월 2,700만 원(판매가 30,000원 × 하루 30건 × 30일 = 900건)이고 원가·수수료·배송비 조건이 동일하다고 가정해 보겠습니다.
+          공헌이익(C)이 건당 14,000원인 상태에서 경쟁 심화로 클릭 단가(CPC)가 올라 건당 광고비(CPA)가 <strong>3,000원 → 5,000원</strong>으로 2,000원 상승하면 어떤 일이 일어날까요?
+        </p>
+        <div class="btn-row" style="margin-bottom: 12px;">
+          <button type="button" class="btn btn-secondary" id="btn-sim-cpa-3k">CPA 3,000원(월 900건) 적용</button>
+          <button type="button" class="btn btn-outline" id="btn-sim-cpa-5k">CPA 5,000원(월 900건) 적용</button>
+        </div>
+        <ul>
+          <li><strong>CPA 3,000원일 때 (ROAS 1,000%):</strong> 건당 순이익 = 14,000 - 3,000 = <strong>11,000원</strong> → 월간 900건 판매 시 <strong>월 영업이익 9,900,000원</strong></li>
+          <li><strong>CPA 5,000원일 때 (ROAS 600%):</strong> 건당 순이익 = 14,000 - 5,000 = <strong>9,000원</strong> → 월간 900건 판매 시 <strong>월 영업이익 8,100,000원</strong></li>
+          <li><strong>변화 폭 분석:</strong> 건당 광고비가 고작 2,000원 올랐을 뿐인데, <strong>월간 순이익은 1,800,000원(-18.18%) 즉시 감소</strong>합니다. 만약 원래 공헌이익(C)이 6,000원밖에 안 되는 저마진 상품이었다면 CPA가 3,000원→5,000원으로 오르는 순간 월 순이익은 270만 원에서 90만 원으로 <strong>무려 -66.67% 폭락</strong>하게 됩니다.</li>
+        </ul>
+      </article>
+
+      <section class="article-section" aria-label="자주 묻는 질문">
+        <h2>자주 묻는 질문 (FAQ)</h2>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>공헌이익(C)이 0원 이하일 때 왜 손익분기 ROAS를 숫자로 표시하지 않나요?</summary>
+            <p>
+              광고비를 전혀 쓰지 않아도(광고비 0원) 상품 1개를 팔 때마다 이미 손실이 발생하는 적자 구조에서는 광고 효율(ROAS)을 아무리 높여도 손익분기를 넘길 수 없습니다.
+              잘못된 0%나 음수, 무한대(Infinity) 값 대신 적자 구조임을 명확히 경고하여 광고비 낭비를 막습니다.
+            </p>
+          </details>
+          <details class="faq-item">
+            <summary>메타(인스타그램)와 네이버 광고관리자의 ROAS 기준 중 무엇을 선택해야 하나요?</summary>
+            <p>
+              일반적으로 픽셀이나 전환 스크립트는 고객이 최종 결제한 금액 또는 쿠폰 적용 전 주문 금액을 잡습니다.
+              플랫폼 보전 쿠폰이 포함된 상품 매출 기준이라면 '판매자 귀속 상품 매출'을, 쿠폰 차감 후 실제 결제액을 추적한다면 '고객 실결제가'를 선택하세요.
+            </p>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>SELLER MATH</strong> — 쇼핑몰 셀러 정산·마진·ROAS·판매가 역산 무료 웹 도구<br>
+        <span>본 계산 결과는 참고용 추정치이며 실제 광고 플랫폼 정산·과금 결과와 차이가 발생할 수 있습니다.</span>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">종합 대시보드</a>
+        <a href="profit-calculator.html">순이익 계산기</a>
+        <a href="selling-price-calculator.html">판매가 역산기</a>
+        <a href="legal.html">개인정보처리방침·이용약관·면책고지</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="common.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var SM = window.SellerMath;
+      var form = document.getElementById('roas-form');
+      var kpiGrid = document.getElementById('roas-kpi-grid');
+      var errorBox = document.getElementById('roas-error-box');
+      var simContainer = document.getElementById('roas-sim-container');
+      var waterfallContainer = document.getElementById('waterfall-container');
+      var scenarioContainer = document.getElementById('scenario-container');
+      var toastEl = document.getElementById('action-toast');
+
+      var customFeeWrap = document.getElementById('custom-fee-wrap');
+      var simplifiedFields = document.getElementById('simplified-tax-fields');
+      var lastRoasResult = null;
+
+      var NUMERIC_FIELDS = [
+        'listPrice', 'sellerDiscount', 'platformDiscount', 'cogs',
+        'feeRate', 'customFeeBase', 'customerShipping', 'sellerShippingCost',
+        'shippingFeeRate', 'adSpend', 'dailyVolume', 'monthlyDays',
+        'simplifiedInputCreditRate'
+      ];
+      var CHECKBOX_FIELDS = [
+        'platformSubsidyReimbursed', 'revenueVatIncluded',
+        'cogsVatIncluded', 'cogsVatDeductible',
+        'feeVatIncluded', 'feeVatDeductible',
+        'shippingVatIncluded', 'shippingVatDeductible',
+        'adVatIncluded', 'adVatDeductible'
+      ];
+      var SELECT_FIELDS = [
+        'adRevenueBasis', 'feeBasisMode', 'customFeeMode', 'accountingBasis', 'taxpayerType'
+      ];
+
+      function writeInputsToForm(inp) {
+        document.getElementById('itemName').value = inp.itemName || '';
+        NUMERIC_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) el.value = inp[key];
+        });
+        CHECKBOX_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) el.checked = Boolean(inp[key]);
+        });
+        SELECT_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) el.value = inp[key];
+        });
+        var simpEl = document.getElementById('simplifiedValueAddedRate');
+        if (simpEl) {
+          simpEl.value = inp.simplifiedValueAddedRate !== null ? String(inp.simplifiedValueAddedRate) : '';
+        }
+      }
+
+      function readInputsFromForm() {
+        var current = SM.loadSharedInputs();
+        current.itemName = document.getElementById('itemName').value;
+        NUMERIC_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) current[key] = el.value;
+        });
+        CHECKBOX_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) current[key] = el.checked;
+        });
+        SELECT_FIELDS.forEach(function (key) {
+          var el = document.getElementById(key);
+          if (el) current[key] = el.value;
+        });
+        var simpVal = document.getElementById('simplifiedValueAddedRate').value;
+        current.simplifiedValueAddedRate = simpVal === '' ? null : Number(simpVal);
+        return SM.normalizeInputs(current);
+      }
+
+      function syncConditionalUi(inp) {
+        var isCustom = inp.feeBasisMode === 'custom_basis';
+        customFeeWrap.hidden = !isCustom;
+        if (isCustom && inp.customFeeMode === 'fixed_fee') {
+          document.getElementById('feeRate').disabled = true;
+          document.getElementById('customFeeBaseLabel').textContent = '고정 수수료 금액 (원)';
+        } else {
+          document.getElementById('feeRate').disabled = false;
+          document.getElementById('customFeeBaseLabel').textContent = '직접 입력 수수료 기준금액 (원)';
+        }
+        simplifiedFields.hidden = inp.taxpayerType !== 'simplified';
+      }
+
+      function renderSimTable(roasRes) {
+        SM.clearEl(simContainer);
+        if (!roasRes.isAchievable || roasRes.simulations.length === 0) {
+          simContainer.appendChild(
+            SM.createEl('p', 'empty-state', '손익분기 달성이 가능한 공헌이익(C > 0) 구조일 때 목표 ROAS 구간별 시뮬레이션 표가 표시됩니다.')
+          );
+          return;
+        }
+
+        var wrap = SM.createEl('div', 'table-responsive');
+        var table = SM.createEl('table', 'data-table');
+        var thead = SM.createEl('thead');
+        var htr = SM.createEl('tr');
+        ['목표 ROAS', '건당 허용 광고비(CPA)', '건당 예상 순이익', '예상 순마진율', '월간 예상 순이익', '상태'].forEach(function (h) {
+          htr.appendChild(SM.createEl('th', h.indexOf('상태') !== -1 || h === '목표 ROAS' ? '' : 'num', h));
+        });
+        thead.appendChild(htr);
+        table.appendChild(thead);
+
+        var tbody = SM.createEl('tbody');
+        roasRes.simulations.forEach(function (row) {
+          var tr = SM.createEl('tr', row.isBreakEven ? 'row-highlight' : '');
+          var roasText = row.isBreakEven ? SM.formatPercent(row.roasPct) + ' (손익분기)' : SM.formatPercent(row.roasPct);
+          tr.appendChild(SM.createEl('td', '', roasText));
+          tr.appendChild(SM.createEl('td', 'num', SM.formatCurrency(row.allowedAdSpend)));
+
+          var profCls = row.expectedProfit > 0.5 ? 'num text-positive' : row.expectedProfit < -0.5 ? 'num text-negative' : 'num';
+          tr.appendChild(SM.createEl('td', profCls, SM.formatCurrency(row.expectedProfit)));
+          tr.appendChild(SM.createEl('td', 'num', row.expectedMargin !== null ? SM.formatPercent(row.expectedMargin) : '산출 불가'));
+          tr.appendChild(SM.createEl('td', profCls, SM.formatCurrency(row.monthlyProfit)));
+
+          var pillTd = SM.createEl('td');
+          var pillCls = row.status === '흑자' ? 'status-pill status-profit' : row.status === '적자' ? 'status-pill status-loss' : 'status-pill status-be';
+          pillTd.appendChild(SM.createEl('span', pillCls, row.status));
+          tr.appendChild(pillTd);
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        simContainer.appendChild(wrap);
+      }
+
+      function renderResults() {
+        var inp = readInputsFromForm();
+        SM.saveSharedInputs(inp);
+        syncConditionalUi(inp);
+
+        var roasRes = SM.calculateRoas(inp);
+        var pRes = roasRes.profitResult;
+        lastRoasResult = roasRes;
+
+        document.getElementById('roas-basis-desc').textContent =
+          '광고 귀속 매출 기준: ' +
+          roasRes.adRevenueBasisLabel +
+          ' (' +
+          SM.formatCurrency(roasRes.adRevenue) +
+          ') · 회계 기준: ' +
+          pRes.accountingBasisLabel;
+
+        if (!roasRes.isAchievable) {
+          errorBox.hidden = false;
+          errorBox.textContent = roasRes.errorMessage;
+        } else {
+          errorBox.hidden = true;
+          errorBox.textContent = '';
+        }
+
+        SM.clearEl(kpiGrid);
+        var kpis = [
+          {
+            label: '광고 전 공헌이익 (C)',
+            value: SM.formatCurrency(roasRes.contributionMargin),
+            sub: '순이익 계산기와 100% 일치',
+            cls: roasRes.contributionMargin > 0 ? '' : 'kpi-negative'
+          },
+          {
+            label: '최대 허용 광고비 (CPA 한도)',
+            value: roasRes.maxCpaLabel,
+            sub: roasRes.isAchievable ? '이 금액 초과 시 건당 적자' : '한도 산출 불가',
+            cls: roasRes.isAchievable ? 'kpi-highlight' : 'kpi-negative'
+          },
+          {
+            label: '손익분기 ROAS (최소 효율)',
+            value: roasRes.breakEvenRoasLabel,
+            sub: '귀속 매출 ' + SM.formatCurrency(roasRes.adRevenue) + ' 기준',
+            cls: roasRes.isAchievable ? 'kpi-highlight' : 'kpi-negative'
+          },
+          {
+            label: '현재 ROAS / 건당 순이익',
+            value: roasRes.currentRoasLabel,
+            sub: '건당 순이익 ' + SM.formatCurrency(pRes.operatingProfit),
+            cls: pRes.operatingProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
+          }
+        ];
+
+        kpis.forEach(function (k) {
+          var card = SM.createEl('div', 'kpi-card ' + k.cls);
+          card.appendChild(SM.createEl('span', 'kpi-label', k.label));
+          card.appendChild(SM.createEl('strong', 'kpi-value', k.value));
+          card.appendChild(SM.createEl('span', 'kpi-sub', k.sub));
+          kpiGrid.appendChild(card);
+        });
+
+        renderSimTable(roasRes);
+        SM.renderWaterfallBreakdown(waterfallContainer, pRes);
+      }
+
+      function refreshScenarios() {
+        var scenarios = SM.loadScenarios();
+        SM.renderScenarioTable(
+          scenarioContainer,
+          scenarios,
+          function (id) {
+            SM.deleteScenario(id);
+            refreshScenarios();
+            showToast('시나리오를 삭제했습니다.');
+          },
+          function (list) {
+            SM.exportScenariosToCsv(list, 'seller-math-roas-scenarios');
+            showToast('CSV 파일을 다운로드했습니다.');
+          },
+          function () {
+            SM.clearScenarios();
+            refreshScenarios();
+            showToast('시나리오를 모두 삭제했습니다.');
+          }
+        );
+      }
+
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        setTimeout(function () {
+          if (toastEl.textContent === msg) toastEl.textContent = '';
+        }, 3500);
+      }
+
+      form.addEventListener('input', renderResults);
+      form.addEventListener('change', renderResults);
+
+      document.getElementById('btn-reset-default').addEventListener('click', function () {
+        var def = SM.cloneDefaults();
+        SM.saveSharedInputs(def);
+        writeInputsToForm(def);
+        renderResults();
+        showToast('표준 테스트 값(30,000원 기준)으로 초기화했습니다.');
+      });
+
+      function applyCpaCase(cpa) {
+        var sample = Object.assign(SM.cloneDefaults(), {
+          itemName: 'CPA ' + cpa + '원 시뮬레이션 (월 900건)',
+          listPrice: 30000,
+          cogs: 10000,
+          feeRate: 10,
+          sellerShippingCost: 3000,
+          adSpend: cpa,
+          dailyVolume: 30,
+          monthlyDays: 30
+        });
+        SM.saveSharedInputs(sample);
+        writeInputsToForm(sample);
+        renderResults();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('CPA ' + SM.formatCurrency(cpa) + ' 조건이 적용되었습니다.');
+      }
+
+      document.getElementById('btn-sim-cpa-3k').addEventListener('click', function () {
+        applyCpaCase(3000);
+      });
+      document.getElementById('btn-sim-cpa-5k').addEventListener('click', function () {
+        applyCpaCase(5000);
+      });
+
+      document.getElementById('btn-save-scenario').addEventListener('click', function () {
+        if (!lastRoasResult) return;
+        SM.saveScenario(lastRoasResult.profitResult.inputs.itemName, lastRoasResult.profitResult);
+        refreshScenarios();
+        showToast('시나리오 비교함에 저장되었습니다.');
+      });
+
+      document.getElementById('btn-copy-summary').addEventListener('click', function () {
+        if (!lastRoasResult) return;
+        var p = lastRoasResult.profitResult;
+        var lines = [
+          '[SELLER MATH 손익분기 ROAS 분석]',
+          '상품명: ' + (p.inputs.itemName || '미지정'),
+          '광고 전 공헌이익(C): ' + SM.formatCurrency(lastRoasResult.contributionMargin),
+          '최대 허용 CPA: ' + lastRoasResult.maxCpaLabel,
+          '손익분기 ROAS: ' + lastRoasResult.breakEvenRoasLabel,
+          '현재 광고비 기준 ROAS: ' + lastRoasResult.currentRoasLabel + ' (건당 영업이익: ' + SM.formatCurrency(p.operatingProfit) + ')'
+        ];
+        SM.copyTextToClipboard(lines.join('\n')).then(function (ok) {
+          showToast(ok ? 'ROAS 분석 결과를 복사했습니다.' : '복사에 실패했습니다.');
+        });
+      });
+
+      writeInputsToForm(SM.loadSharedInputs());
+      renderResults();
+      refreshScenarios();
+    })();
+  </script>
+</body>
+</html>
