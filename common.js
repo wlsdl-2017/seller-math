@@ -52,7 +52,7 @@
   }
 
   var DEFAULT_INPUTS = {
-    itemName: '기본 테스트 상품',
+    itemName: '샘플 상품 (3만 원)',
     listPrice: 30000,
     sellerDiscount: 0,
     platformDiscount: 0,
@@ -1327,27 +1327,27 @@
 
     var s1List = createEl('ul', 'waterfall-list');
     var s1Rows = [
-      { label: t('등록 정가 (P_list)', 'List Price (P_list)'), value: formatCurrency(result.listPrice), type: 'base' },
-      { label: t('(-) 판매자 부담 할인액 (D_seller)', '(-) Seller-Funded Discount (D_seller)'), value: result.sellerDiscount > 0 ? '-' + formatCurrency(result.sellerDiscount) : zeroCur, type: 'minus' },
+      { label: t('등록 판매가', 'List Price'), value: formatCurrency(result.listPrice), type: 'base' },
+      { label: t('판매자 부담 할인', 'Seller Discount'), value: result.sellerDiscount > 0 ? '-' + formatCurrency(result.sellerDiscount) : zeroCur, type: 'minus' },
       {
         label: inp.platformSubsidyReimbursed
-          ? t('(-) 플랫폼 쿠폰 할인액 (고객 차감·정산 시 보전됨)', '(-) Platform Coupon (Deducted from Buyer, Reimbursed)')
-          : t('(-) 플랫폼 쿠폰 할인액 (미보전·셀러 매출 차감)', '(-) Platform Coupon (Non-Reimbursed, Reduces Revenue)'),
+          ? t('플랫폼 쿠폰 할인 (정산 시 보전)', 'Platform Coupon (Reimbursed)')
+          : t('플랫폼 쿠폰 할인 (미보전·매출 차감)', 'Platform Coupon (Not Reimbursed)'),
         value: result.platformDiscount > 0 ? '-' + formatCurrency(result.platformDiscount) : zeroCur,
         type: 'minus'
       },
-      { label: t('(=) 고객 실제 결제 상품가 (P_pay)', '(=) Customer Actual Product Payment (P_pay)'), value: formatCurrency(result.customerPayment), type: 'subtotal' },
+      { label: t('고객 실결제 상품가', 'Buyer Paid Price'), value: formatCurrency(result.customerPayment), type: 'subtotal' },
       {
         label: inp.platformSubsidyReimbursed
-          ? t('(+) 플랫폼 쿠폰 정산 보전금', '(+) Platform Coupon Reimbursement')
-          : t('(+) 플랫폼 쿠폰 정산 보전금 (해당 없음)', '(+) Platform Coupon Reimbursement (None)'),
+          ? t('플랫폼 쿠폰 보전금', 'Coupon Reimbursement')
+          : t('플랫폼 쿠폰 보전금 (해당 없음)', 'Coupon Reimbursement (None)'),
         value: result.platformSubsidyRecognized > 0 ? '+' + formatCurrency(result.platformSubsidyRecognized) : zeroCur,
         type: 'plus'
       },
-      { label: t('(=) 판매자 귀속 상품 매출 (R_seller)', '(=) Seller Attributed Revenue (R_seller)'), value: formatCurrency(result.sellerProductRevenue), type: 'subtotal' },
-      { label: t('(+) 고객 결제 배송비 (S_cust)', '(+) Customer Shipping Paid (S_cust)'), value: result.customerShipping > 0 ? '+' + formatCurrency(result.customerShipping) : zeroCur, type: 'plus' },
-      { label: t('(-) 마켓 수수료 합계 (', '(-) Marketplace Fee Total (') + result.feeBasisLabel + ')', value: result.feeVat.cash > 0 ? '-' + formatCurrency(result.feeVat.cash) : zeroCur, type: 'minus' },
-      { label: t('(=) 플랫폼 정산 예정액 (원가·택배원가·광고 차감 전)', '(=) Estimated Platform Settlement (Before COGS/Shipping/Ads)'), value: formatCurrency(result.platformSettlement), type: 'total' }
+      { label: t('판매자 귀속 상품 매출', 'Seller Product Revenue'), value: formatCurrency(result.sellerProductRevenue), type: 'subtotal' },
+      { label: t('고객 결제 배송비', 'Customer Shipping Paid'), value: result.customerShipping > 0 ? '+' + formatCurrency(result.customerShipping) : zeroCur, type: 'plus' },
+      { label: t('마켓 수수료 합계 (', 'Marketplace Fee Total (') + result.feeBasisLabel + ')', value: result.feeVat.cash > 0 ? '-' + formatCurrency(result.feeVat.cash) : zeroCur, type: 'minus' },
+      { label: t('플랫폼 정산 예정액 (원가·택배·광고 차감 전)', 'Estimated Platform Payout (Before Costs & Ads)'), value: formatCurrency(result.platformSettlement), type: 'total' }
     ];
 
     s1Rows.forEach(function (row) {
@@ -1377,16 +1377,16 @@
 
     var s2List = createEl('ul', 'waterfall-list');
     var s2Rows = [
-      { label: t('기준 순매출 (배송비 수익 포함)', 'Recognized Net Revenue (Incl. Shipping Income)'), value: formatCurrency(result.recognizedRevenue), type: 'base' },
-      { label: t('(-) 기준 마켓 수수료', '(-) Recognized Marketplace Fee'), value: result.recognizedFee > 0 ? '-' + formatCurrency(result.recognizedFee) : zeroCur, type: 'minus' },
-      { label: t('(-) 기준 상품 매입 원가 (COGS)', '(-) Recognized Product Cost (COGS)'), value: result.recognizedCogs > 0 ? '-' + formatCurrency(result.recognizedCogs) : zeroCur, type: 'minus' },
-      { label: t('(-) 기준 판매자 실부담 배송 원가', '(-) Recognized Seller Shipping Cost'), value: result.recognizedShipping > 0 ? '-' + formatCurrency(result.recognizedShipping) : zeroCur, type: 'minus' },
-      { label: t('(=) 광고비 차감 전 공헌이익 (C)', '(=) Pre-Ad Contribution Margin (C)'), value: formatCurrency(result.contributionMargin), type: 'subtotal-accent' },
-      { label: t('(-) 기준 건당 광고비 (AdSpend)', '(-) Recognized Ad Spend per Order'), value: result.recognizedAdSpend > 0 ? '-' + formatCurrency(result.recognizedAdSpend) : zeroCur, type: 'minus' },
+      { label: t('순매출 (배송비 수익 포함)', 'Net Revenue (Incl. Shipping)'), value: formatCurrency(result.recognizedRevenue), type: 'base' },
+      { label: t('마켓 수수료', 'Marketplace Fee'), value: result.recognizedFee > 0 ? '-' + formatCurrency(result.recognizedFee) : zeroCur, type: 'minus' },
+      { label: t('상품 매입 원가', 'Product Cost (COGS)'), value: result.recognizedCogs > 0 ? '-' + formatCurrency(result.recognizedCogs) : zeroCur, type: 'minus' },
+      { label: t('판매자 부담 택배비', 'Seller Courier Cost'), value: result.recognizedShipping > 0 ? '-' + formatCurrency(result.recognizedShipping) : zeroCur, type: 'minus' },
+      { label: t('광고비 차감 전 공헌이익', 'Pre-Ad Contribution Margin'), value: formatCurrency(result.contributionMargin), type: 'subtotal-accent' },
+      { label: t('건당 광고비', 'Ad Spend per Order'), value: result.recognizedAdSpend > 0 ? '-' + formatCurrency(result.recognizedAdSpend) : zeroCur, type: 'minus' },
       {
         label: t(
-          '(=) 세금 미반영 영업 추정 이익 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 기준' : 'VAT 포함 현금 기준') + ')',
-          '(=) Pre-Tax Est. Operating Profit (' + (inp.accountingBasis === 'supply_basis' ? 'Supply Basis' : 'Cash Basis') + ')'
+          '최종 영업 추정 이익 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 기준' : '현금 기준') + ')',
+          'Est. Operating Profit (' + (inp.accountingBasis === 'supply_basis' ? 'Supply Basis' : 'Cash Basis') + ')'
         ),
         value: formatCurrency(result.operatingProfit),
         type: result.operatingProfit >= 0 ? 'total-profit' : 'total-loss'
@@ -1656,7 +1656,8 @@
    * 공용 다국어(KO/EN) 번역 사전 및 XSS-안전 DOM 번역 엔진
    */
   var COMMON_I18N_MAP = {
-    '쇼핑몰 셀러 정산·마진·ROAS 통합 회계 엔진': 'Unified E-Commerce Seller Settlement, Margin & ROAS Engine',
+    '쇼핑몰 셀러 정산·마진·ROAS 통합 회계 엔진': 'Seller Settlement, Margin & ROAS Calculator',
+    '쇼핑몰 정산 · 마진 · ROAS 계산기': 'Seller Settlement, Margin & ROAS Calculator',
     '종합 대시보드': 'Dashboard',
     '순이익·정산 계산기': 'Profit & Settlement',
     '손익분기 ROAS': 'Break-Even ROAS',
