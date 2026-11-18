@@ -1785,7 +1785,7 @@
     }
 
     // 2. Leaf text elements via dictionary
-    var candidates = document.querySelectorAll('h1, h2, h3, p, a, span, strong, label, button, summary, th, td, li, option');
+    var candidates = document.querySelectorAll('h1, h2, h3, p, a, span, strong, label, button, summary, th, td, li, option, .form-section-label');
     for (var j = 0; j < candidates.length; j++) {
       var el = candidates[j];
       if (el.hasAttribute('data-i18n-en') || el.classList.contains('lang-switch-btn')) continue;
