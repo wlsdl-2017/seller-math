@@ -1865,6 +1865,1205 @@
     applyDomTranslations();
   }
 
+  /* ==========================================================================
+     엑셀(.xlsx / .csv / .tsv) & 표 붙여넣기 일괄 마진·정산 계산 엔진 (100% 브라우저 로컬)
+     ========================================================================== */
+
+  var BULK_FIELD_SPECS = [
+    { key: 'itemName', ko: '상품명', en: 'Product Name', keywords: ['상품명', '품목명', '품목', '옵션명', '제품명', '주문상품', '아이템', '상품', 'productname', 'itemname', 'product', 'item', 'sku', 'title', 'name'] },
+    { key: 'listPrice', ko: '정상가/판매가', en: 'Selling Price', keywords: ['판매단가', '정상가', '판매가', '소비자가', '정가', '결제금액', '매출액', '단가', 'sellingprice', 'saleprice', 'listprice', 'unitprice', 'price', 'revenue'] },
+    { key: 'cogs', ko: '매입원가', en: 'COGS (Unit Cost)', keywords: ['매입원가', '공급원가', '제품원가', '사입원가', '도매가', '사입가', '매입가', '공급가', '원가', 'unitcost', 'wholesale', 'cogs', 'cost'] },
+    { key: 'feeRate', ko: '수수료 (% 또는 원)', en: 'Fee (% or Fixed)', keywords: ['마켓수수료', '판매수수료', '플랫폼수수료', '수수료율', '수수료', 'commissionrate', 'referralfee', 'feerate', 'commission', 'fee'] },
+    { key: 'sellerDiscount', ko: '판매자할인', en: 'Seller Discount', keywords: ['판매자부담할인', '판매자할인', '즉시할인', '자사쿠폰', '판매자쿠폰', '할인금액', '할인', 'sellerdiscount', 'discount', 'coupon'] },
+    { key: 'platformDiscount', ko: '플랫폼할인', en: 'Platform Discount', keywords: ['플랫폼할인', '마켓지원할인', '네이버지원할인', '플랫폼쿠폰', '지원할인', 'platformdiscount', 'marketdiscount'] },
+    { key: 'sellerShippingCost', ko: '실택배비(원가)', en: 'Seller Shipping Cost', keywords: ['판매자배송비', '출고배송비', '실택배비', '택배비', '배송원가', '물류비', '포장배송비', '포장비', '운임', 'shippingcost', 'fulfillment', 'freight'] },
+    { key: 'customerShipping', ko: '고객부담배송비', en: 'Customer Shipping', keywords: ['고객부담배송비', '고객결제배송비', '고객배송비', '수취배송비', '유료배송비', '결제배송비', 'customershipping', 'shippingcharged', 'deliveryfee'] },
+    { key: 'adSpend', ko: '광고비(건당)', en: 'Ad Spend (Per Unit)', keywords: ['건당광고비', '지출광고비', '광고소진액', '집행광고비', '마케팅비', '광고비', 'adspend', 'adcost', 'marketing', 'ads'] },
+    { key: 'quantity', ko: '판매수량', en: 'Quantity', keywords: ['판매수량', '주문수량', '판매건수', '수량', '건수', '개수', 'quantity', 'qty', 'units', 'orders', 'count'] }
+  ];
+
+  function normalizeHeaderToken(text) {
+    return String(text || '')
+      .replace(/\([^)]*\)/g, '')
+      .replace(/\[[^\]]*\]/g, '')
+      .replace(/[\s_\-:/\\%₩$,.]/g, '')
+      .toLowerCase();
+  }
+
+  function detectDelimiter(text) {
+    var lines = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    var tabCount = 0;
+    var commaCount = 0;
+    var scanned = 0;
+
+    for (var i = 0; i < lines.length && scanned < 4; i++) {
+      var line = lines[i];
+      if (!line || !line.trim()) continue;
+      scanned += 1;
+      var inQuotes = false;
+      for (var c = 0; c < line.length; c++) {
+        var ch = line.charAt(c);
+        if (ch === '"') {
+          if (inQuotes && c + 1 < line.length && line.charAt(c + 1) === '"') {
+            c += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (!inQuotes) {
+          if (ch === '\t') tabCount += 1;
+          else if (ch === ',') commaCount += 1;
+        }
+      }
+    }
+
+    if (tabCount > 0 && tabCount >= commaCount) return '\t';
+    if (tabCount > 0 && scanned === 1) return '\t';
+    return ',';
+  }
+
+  function parseDelimitedText(text) {
+    var src = String(text || '').replace(/^\uFEFF/, '');
+    if (!src.trim()) return [];
+
+    var delimiter = detectDelimiter(src);
+    var rows = [];
+    var currentRow = [];
+    var currentCell = '';
+    var inQuotes = false;
+
+    for (var i = 0; i < src.length; i++) {
+      var ch = src.charAt(i);
+      if (inQuotes) {
+        if (ch === '"') {
+          if (i + 1 < src.length && src.charAt(i + 1) === '"') {
+            currentCell += '"';
+            i += 1;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          currentCell += ch;
+        }
+      } else {
+        if (ch === '"' && currentCell.trim() === '') {
+          inQuotes = true;
+          currentCell = '';
+        } else if (ch === delimiter) {
+          currentRow.push(currentCell.trim());
+          currentCell = '';
+        } else if (ch === '\r') {
+          if (i + 1 < src.length && src.charAt(i + 1) === '\n') {
+            i += 1;
+          }
+          currentRow.push(currentCell.trim());
+          if (!isRowEmpty(currentRow)) rows.push(currentRow);
+          currentRow = [];
+          currentCell = '';
+        } else if (ch === '\n') {
+          currentRow.push(currentCell.trim());
+          if (!isRowEmpty(currentRow)) rows.push(currentRow);
+          currentRow = [];
+          currentCell = '';
+        } else {
+          currentCell += ch;
+        }
+      }
+    }
+
+    currentRow.push(currentCell.trim());
+    if (!isRowEmpty(currentRow)) rows.push(currentRow);
+
+    return rows;
+  }
+
+  function isRowEmpty(row) {
+    if (!Array.isArray(row) || row.length === 0) return true;
+    for (var i = 0; i < row.length; i++) {
+      if (String(row[i] || '').trim() !== '') return false;
+    }
+    return true;
+  }
+
+  function detectColumnMapping(headers) {
+    var mapping = {};
+    for (var s = 0; s < BULK_FIELD_SPECS.length; s++) {
+      mapping[BULK_FIELD_SPECS[s].key] = -1;
+    }
+    if (!Array.isArray(headers) || headers.length === 0) return mapping;
+
+    var normalizedHeaders = headers.map(normalizeHeaderToken);
+    var candidates = [];
+
+    for (var f = 0; f < BULK_FIELD_SPECS.length; f++) {
+      var spec = BULK_FIELD_SPECS[f];
+      for (var c = 0; c < normalizedHeaders.length; c++) {
+        var token = normalizedHeaders[c];
+        if (!token) continue;
+        var bestScore = 0;
+        for (var k = 0; k < spec.keywords.length; k++) {
+          var kw = spec.keywords[k];
+          if (token === kw) {
+            bestScore = Math.max(bestScore, 1000 + kw.length * 10 - k);
+          } else if (token.indexOf(kw) !== -1) {
+            bestScore = Math.max(bestScore, 400 + kw.length * 10 - k);
+          } else if (kw.length >= 4 && kw.indexOf(token) !== -1 && token.length >= 3) {
+            bestScore = Math.max(bestScore, 150 + token.length * 5);
+          }
+        }
+        if (bestScore > 0) {
+          candidates.push({ fieldKey: spec.key, colIdx: c, score: bestScore, fieldOrder: f });
+        }
+      }
+    }
+
+    candidates.sort(function (a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.fieldOrder - b.fieldOrder;
+    });
+
+    var usedCols = {};
+    for (var m = 0; m < candidates.length; m++) {
+      var cand = candidates[m];
+      if (mapping[cand.fieldKey] === -1 && !usedCols[cand.colIdx]) {
+        mapping[cand.fieldKey] = cand.colIdx;
+        usedCols[cand.colIdx] = true;
+      }
+    }
+
+    return mapping;
+  }
+
+  function countMappedFields(mapping) {
+    var count = 0;
+    var keys = Object.keys(mapping);
+    for (var i = 0; i < keys.length; i++) {
+      if (mapping[keys[i]] >= 0) count += 1;
+    }
+    return count;
+  }
+
+  function findBestHeaderRow(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return { headerRowIndex: -1, headers: [], dataRows: [], mapping: detectColumnMapping([]) };
+    }
+
+    var scanLimit = Math.min(rows.length, 6);
+    var bestIdx = 0;
+    var bestScore = -1;
+    var bestMapping = detectColumnMapping(rows[0]);
+
+    for (var i = 0; i < scanLimit; i++) {
+      var candidateMapping = detectColumnMapping(rows[i]);
+      var mappedCount = countMappedFields(candidateMapping);
+      var keyBonus = (candidateMapping.listPrice >= 0 ? 2 : 0) + (candidateMapping.cogs >= 0 ? 2 : 0);
+      var totalScore = mappedCount * 10 + keyBonus;
+      if (totalScore > bestScore) {
+        bestScore = totalScore;
+        bestIdx = i;
+        bestMapping = candidateMapping;
+      }
+    }
+
+    return {
+      headerRowIndex: bestIdx,
+      headers: rows[bestIdx] || [],
+      dataRows: rows.slice(bestIdx + 1),
+      mapping: bestMapping
+    };
+  }
+
+  function parseNumericCell(rawVal) {
+    if (typeof rawVal === 'number') {
+      return Number.isFinite(rawVal) ? rawVal : NaN;
+    }
+    var str = String(rawVal || '').trim();
+    if (!str) return NaN;
+
+    var isParenNeg = /^\(.*\)$/.test(str);
+    var cleaned = str
+      .replace(/^\((.*)\)$/, '$1')
+      .replace(/[,₩$%\s]/g, '')
+      .replace(/(원|개|건|ea|krw|usd)$/gi, '')
+      .trim();
+
+    if (!cleaned || cleaned === '-') return NaN;
+    var num = Number(cleaned);
+    if (!Number.isFinite(num)) return NaN;
+    return isParenNeg ? -num : num;
+  }
+
+  function computeBatchRows(dataRows, mapping, baseInputs) {
+    var base = normalizeInputs(baseInputs || cloneDefaults());
+    var map = mapping || {};
+    var results = [];
+    var skippedCount = 0;
+
+    var totalUnits = 0;
+    var totalCustomerPayment = 0;
+    var totalRecognizedRevenue = 0;
+    var totalSettlement = 0;
+    var totalOperatingProfit = 0;
+    var totalAdSpend = 0;
+    var lossCount = 0;
+
+    if (!Array.isArray(dataRows)) {
+      dataRows = [];
+    }
+
+    for (var r = 0; r < dataRows.length; r++) {
+      var row = dataRows[r];
+      if (isRowEmpty(row)) continue;
+
+      var itemNameRaw = map.itemName >= 0 ? String(row[map.itemName] || '').trim() : '';
+      var priceRaw = map.listPrice >= 0 ? parseNumericCell(row[map.listPrice]) : NaN;
+      var cogsRaw = map.cogs >= 0 ? parseNumericCell(row[map.cogs]) : NaN;
+
+      // 판매가 컬럼이 매핑된 경우 숫자가 비어있으면 소계/구분선 등으로 간주하고 건너뜀
+      if (map.listPrice >= 0 && Number.isNaN(priceRaw) && Number.isNaN(cogsRaw)) {
+        skippedCount += 1;
+        continue;
+      }
+
+      var rowInputs = Object.assign({}, base);
+      rowInputs.itemName = itemNameRaw || t('상품 #' + (results.length + 1), 'Item #' + (results.length + 1));
+
+      if (map.listPrice >= 0 && !Number.isNaN(priceRaw)) {
+        rowInputs.listPrice = Math.max(0, priceRaw);
+      }
+      if (map.cogs >= 0) {
+        rowInputs.cogs = Number.isNaN(cogsRaw) ? 0 : Math.max(0, cogsRaw);
+      }
+      if (map.sellerDiscount >= 0) {
+        var sd = parseNumericCell(row[map.sellerDiscount]);
+        rowInputs.sellerDiscountType = 'fixed';
+        rowInputs.sellerDiscount = Number.isNaN(sd) ? 0 : Math.max(0, sd);
+      }
+      if (map.platformDiscount >= 0) {
+        var pd = parseNumericCell(row[map.platformDiscount]);
+        rowInputs.platformDiscountType = 'fixed';
+        rowInputs.platformDiscount = Number.isNaN(pd) ? 0 : Math.max(0, pd);
+      }
+      if (map.sellerShippingCost >= 0) {
+        var sc = parseNumericCell(row[map.sellerShippingCost]);
+        rowInputs.sellerShippingCost = Number.isNaN(sc) ? 0 : Math.max(0, sc);
+      }
+      if (map.customerShipping >= 0) {
+        var cs = parseNumericCell(row[map.customerShipping]);
+        rowInputs.customerShipping = Number.isNaN(cs) ? 0 : Math.max(0, cs);
+      }
+      if (map.adSpend >= 0) {
+        var ad = parseNumericCell(row[map.adSpend]);
+        rowInputs.adSpend = Number.isNaN(ad) ? 0 : Math.max(0, ad);
+      }
+      if (map.feeRate >= 0) {
+        var feeVal = parseNumericCell(row[map.feeRate]);
+        var cleanFee = Number.isNaN(feeVal) ? 0 : Math.max(0, feeVal);
+        if (cleanFee > 100) {
+          // 100 초과 값은 비율(%)이 아닌 건당 정액 수수료(원)로 자동 전환 처리
+          rowInputs.feeBasisMode = 'custom_basis';
+          rowInputs.customFeeMode = 'fixed_fee';
+          rowInputs.customFeeBase = cleanFee;
+          rowInputs.feeRate = 0;
+        } else {
+          if (rowInputs.feeBasisMode === 'custom_basis' && rowInputs.customFeeMode === 'fixed_fee') {
+            rowInputs.feeBasisMode = 'seller_revenue';
+          }
+          rowInputs.feeRate = cleanFee;
+        }
+      }
+
+      var qty = 1;
+      if (map.quantity >= 0) {
+        var q = parseNumericCell(row[map.quantity]);
+        qty = !Number.isNaN(q) && q > 0 ? q : 1;
+      }
+
+      var profitRes = calculateProfit(rowInputs);
+      var roasRes = calculateRoas(rowInputs);
+      var isLoss = profitRes.operatingProfit < -EPSILON;
+      if (isLoss) lossCount += 1;
+
+      var rowTotalPayment = profitRes.customerPayment * qty;
+      var rowTotalSettlement = profitRes.platformSettlement * qty;
+      var rowTotalProfit = profitRes.operatingProfit * qty;
+      var rowTotalRecognizedRev = profitRes.recognizedRevenue * qty;
+
+      totalUnits += qty;
+      totalCustomerPayment += rowTotalPayment;
+      totalRecognizedRevenue += rowTotalRecognizedRev;
+      totalSettlement += rowTotalSettlement;
+      totalOperatingProfit += rowTotalProfit;
+      totalAdSpend += profitRes.inputs.adSpend * qty;
+
+      results.push({
+        rowNumber: r + 1,
+        quantity: qty,
+        inputs: profitRes.inputs,
+        profit: profitRes,
+        roas: roasRes,
+        totalCustomerPayment: rowTotalPayment,
+        totalSettlement: rowTotalSettlement,
+        totalProfit: rowTotalProfit,
+        isLoss: isLoss
+      });
+    }
+
+    var avgMarginRate = totalRecognizedRevenue > EPSILON ? (totalOperatingProfit / totalRecognizedRevenue) * 100 : null;
+
+    return {
+      rows: results,
+      skippedCount: skippedCount,
+      summary: {
+        skuCount: results.length,
+        totalUnits: totalUnits,
+        totalCustomerPayment: totalCustomerPayment,
+        totalSettlement: totalSettlement,
+        totalOperatingProfit: totalOperatingProfit,
+        totalAdSpend: totalAdSpend,
+        avgMarginRate: avgMarginRate,
+        lossCount: lossCount
+      }
+    };
+  }
+
+  function decodeZipEntryText(bytes, entry) {
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    var lh = entry.localHeaderOffset;
+    if (lh + 30 > bytes.length || dv.getUint32(lh, true) !== 0x04034b50) {
+      return Promise.reject(new Error(t('손상된 .xlsx 압축 헤더입니다.', 'Corrupted .xlsx ZIP local header.')));
+    }
+    var nameLen = dv.getUint16(lh + 26, true);
+    var extraLen = dv.getUint16(lh + 28, true);
+    var dataStart = lh + 30 + nameLen + extraLen;
+    var slice = bytes.subarray(dataStart, dataStart + entry.compSize);
+
+    if (entry.method === 0) {
+      return Promise.resolve(new TextDecoder('utf-8').decode(slice));
+    }
+    if (entry.method === 8) {
+      if (typeof DecompressionStream === 'undefined' || typeof Response === 'undefined') {
+        return Promise.reject(
+          new Error(
+            t(
+              '현재 브라우저는 내장 압축 해제(DecompressionStream)를 지원하지 않습니다. CSV 저장 또는 표 붙여넣기를 이용해 주세요.',
+              'Your browser does not support native DecompressionStream. Please save as CSV or paste table rows directly.'
+            )
+          )
+        );
+      }
+      var stream = new Blob([slice]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return new Response(stream).text();
+    }
+    return Promise.reject(new Error(t('지원되지 않는 .xlsx 압축 방식입니다: ' + entry.method, 'Unsupported .xlsx compression method: ' + entry.method)));
+  }
+
+  function parseZipEntries(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer);
+    var dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+    if (bytes.length >= 4 && bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0) {
+      throw new Error(
+        t(
+          '구형 .xls(97-2003) 파일은 지원되지 않습니다. 엑셀에서 .xlsx 또는 CSV로 저장하거나 표를 복사해 붙여넣어 주세요.',
+          'Legacy binary .xls (97-2003) files are not supported. Save as .xlsx/.csv or paste table cells.'
+        )
+      );
+    }
+
+    var eocdOffset = -1;
+    var minOffset = Math.max(0, bytes.length - 65557);
+    for (var pos = bytes.length - 22; pos >= minOffset; pos--) {
+      if (dv.getUint32(pos, true) === 0x06054b50) {
+        var cdSizeCheck = dv.getUint32(pos + 12, true);
+        var cdOffCheck = dv.getUint32(pos + 16, true);
+        if (cdOffCheck + cdSizeCheck <= pos) {
+          eocdOffset = pos;
+          break;
+        }
+      }
+    }
+
+    if (eocdOffset === -1) {
+      throw new Error(t('유효한 .xlsx(ZIP) 파일 형식이 아닙니다.', 'Not a valid .xlsx (ZIP) archive.'));
+    }
+
+    var totalEntries = dv.getUint16(eocdOffset + 10, true);
+    var cdOffset = dv.getUint32(eocdOffset + 16, true);
+    var entries = {};
+    var cursor = cdOffset;
+    var nameDecoder = new TextDecoder('utf-8');
+
+    for (var i = 0; i < totalEntries && cursor + 46 <= eocdOffset; i++) {
+      if (dv.getUint32(cursor, true) !== 0x02014b50) break;
+      var method = dv.getUint16(cursor + 10, true);
+      var compSize = dv.getUint32(cursor + 20, true);
+      var nameLen = dv.getUint16(cursor + 28, true);
+      var extraLen = dv.getUint16(cursor + 30, true);
+      var commentLen = dv.getUint16(cursor + 32, true);
+      var localHeaderOffset = dv.getUint32(cursor + 42, true);
+      var rawName = nameDecoder.decode(bytes.subarray(cursor + 46, cursor + 46 + nameLen));
+      var normName = rawName.replace(/\\/g, '/').replace(/^\/+/, '').toLowerCase();
+
+      entries[normName] = {
+        name: normName,
+        method: method,
+        compSize: compSize,
+        localHeaderOffset: localHeaderOffset
+      };
+      cursor += 46 + nameLen + extraLen + commentLen;
+    }
+
+    return { bytes: bytes, entries: entries };
+  }
+
+  function getXmlLocalName(node) {
+    return (node.localName || node.nodeName || '').replace(/^.*:/, '');
+  }
+
+  function extractSiText(siEl) {
+    var parts = [];
+    var children = siEl.childNodes;
+    for (var i = 0; i < children.length; i++) {
+      var node = children[i];
+      if (node.nodeType !== 1) continue;
+      var name = getXmlLocalName(node);
+      if (name === 't') {
+        parts.push(node.textContent || '');
+      } else if (name === 'r') {
+        var rChildren = node.childNodes;
+        for (var j = 0; j < rChildren.length; j++) {
+          var rc = rChildren[j];
+          if (rc.nodeType === 1 && getXmlLocalName(rc) === 't') {
+            parts.push(rc.textContent || '');
+          }
+        }
+      }
+    }
+    return parts.join('');
+  }
+
+  function colRefToIndex(refStr) {
+    if (!refStr) return -1;
+    var match = /^([A-Za-z]+)/.exec(String(refStr).trim());
+    if (!match) return -1;
+    var letters = match[1].toUpperCase();
+    var col = 0;
+    for (var i = 0; i < letters.length; i++) {
+      col = col * 26 + (letters.charCodeAt(i) - 64);
+    }
+    return col - 1;
+  }
+
+  function resolveFirstSheetPath(entries, workbookXml, relsXml) {
+    if (workbookXml && relsXml) {
+      try {
+        var parser = new DOMParser();
+        var wbDoc = parser.parseFromString(workbookXml, 'application/xml');
+        var relDoc = parser.parseFromString(relsXml, 'application/xml');
+
+        var relMap = {};
+        var relEls = relDoc.getElementsByTagName('*');
+        for (var r = 0; r < relEls.length; r++) {
+          if (getXmlLocalName(relEls[r]) === 'Relationship') {
+            var rId = relEls[r].getAttribute('Id');
+            var target = relEls[r].getAttribute('Target');
+            if (rId && target) relMap[rId] = target;
+          }
+        }
+
+        var wbEls = wbDoc.getElementsByTagName('*');
+        for (var s = 0; s < wbEls.length; s++) {
+          if (getXmlLocalName(wbEls[s]) === 'sheet') {
+            var rid = wbEls[s].getAttribute('r:id') || wbEls[s].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+            if (rid && relMap[rid]) {
+              var cleanTarget = relMap[rid].replace(/\\/g, '/').replace(/^\/+/, '');
+              if (cleanTarget.indexOf('xl/') !== 0) {
+                cleanTarget = 'xl/' + cleanTarget.replace(/^\.\.\//, '');
+              }
+              cleanTarget = cleanTarget.toLowerCase();
+              if (entries[cleanTarget]) return cleanTarget;
+            }
+          }
+        }
+      } catch (e) {
+        // Fallback below
+      }
+    }
+
+    if (entries['xl/worksheets/sheet1.xml']) return 'xl/worksheets/sheet1.xml';
+    var sheetKeys = Object.keys(entries).filter(function (k) {
+      return /^xl\/worksheets\/[^/]+\.xml$/i.test(k);
+    });
+    sheetKeys.sort();
+    return sheetKeys[0] || '';
+  }
+
+  function parseXlsxXmlSheet(sheetXml, sharedStringsXml) {
+    var parser = new DOMParser();
+    var sharedStrings = [];
+
+    if (sharedStringsXml) {
+      var ssDoc = parser.parseFromString(sharedStringsXml, 'application/xml');
+      var ssNodes = ssDoc.getElementsByTagName('*');
+      for (var i = 0; i < ssNodes.length; i++) {
+        if (getXmlLocalName(ssNodes[i]) === 'si') {
+          sharedStrings.push(extractSiText(ssNodes[i]));
+        }
+      }
+    }
+
+    var doc = parser.parseFromString(sheetXml, 'application/xml');
+    var allNodes = doc.getElementsByTagName('*');
+    var rows = [];
+
+    for (var n = 0; n < allNodes.length; n++) {
+      var node = allNodes[n];
+      if (getXmlLocalName(node) !== 'row') continue;
+
+      var rowVals = [];
+      var prevCol = -1;
+      var cNodes = node.childNodes;
+      for (var c = 0; c < cNodes.length; c++) {
+        var cellEl = cNodes[c];
+        if (cellEl.nodeType !== 1 || getXmlLocalName(cellEl) !== 'c') continue;
+
+        var colIdx = colRefToIndex(cellEl.getAttribute('r'));
+        if (colIdx < 0) colIdx = prevCol + 1;
+        prevCol = colIdx;
+        while (rowVals.length <= colIdx) rowVals.push('');
+
+        var cellType = cellEl.getAttribute('t') || 'n';
+        var valText = '';
+        var vEl = null;
+        var isEl = null;
+        var cellChildren = cellEl.childNodes;
+        for (var k = 0; k < cellChildren.length; k++) {
+          var ch = cellChildren[k];
+          if (ch.nodeType !== 1) continue;
+          var ln = getXmlLocalName(ch);
+          if (ln === 'v') vEl = ch;
+          else if (ln === 'is') isEl = ch;
+        }
+
+        if (cellType === 's' && vEl) {
+          var ssIdx = parseInt(vEl.textContent || '0', 10);
+          valText = Number.isFinite(ssIdx) && ssIdx >= 0 && ssIdx < sharedStrings.length ? sharedStrings[ssIdx] : '';
+        } else if (cellType === 'inlineStr' && isEl) {
+          valText = extractSiText(isEl);
+        } else if (vEl) {
+          valText = vEl.textContent || '';
+        }
+
+        rowVals[colIdx] = String(valText || '').trim();
+      }
+
+      if (!isRowEmpty(rowVals)) {
+        rows.push(rowVals);
+      }
+    }
+
+    return rows;
+  }
+
+  function decodeCsvBytes(arrayBuffer) {
+    var bytes = new Uint8Array(arrayBuffer);
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch (e) {
+      return new TextDecoder('euc-kr').decode(bytes);
+    }
+  }
+
+  function parseSpreadsheetFile(file) {
+    if (!file || typeof file.arrayBuffer !== 'function') {
+      return Promise.reject(new Error(t('읽을 수 없는 파일입니다.', 'Invalid file object.')));
+    }
+
+    var fileName = String(file.name || '');
+    var extMatch = /\.([^.]+)$/.exec(fileName.toLowerCase());
+    var ext = extMatch ? extMatch[1] : '';
+
+    return file.arrayBuffer().then(function (buf) {
+      if (ext === 'xls') {
+        throw new Error(
+          t(
+            '구형 .xls(97-2003) 파일은 지원되지 않습니다. 엑셀에서 .xlsx 또는 CSV로 저장하거나 표를 복사해 붙여넣어 주세요.',
+            'Legacy binary .xls (97-2003) files are not supported. Save as .xlsx/.csv or paste table cells.'
+          )
+        );
+      }
+
+      var bytes = new Uint8Array(buf);
+      var looksLikeZip = ext === 'xlsx' || (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4b);
+
+      if (looksLikeZip) {
+        if (typeof DOMParser === 'undefined') {
+          throw new Error(t('브라우저 XML 파서를 사용할 수 없습니다.', 'DOMParser is unavailable.'));
+        }
+        var archive = parseZipEntries(buf);
+        var entries = archive.entries;
+        var wbPromise = entries['xl/workbook.xml'] ? decodeZipEntryText(archive.bytes, entries['xl/workbook.xml']) : Promise.resolve('');
+        var relsPromise = entries['xl/_rels/workbook.xml.rels'] ? decodeZipEntryText(archive.bytes, entries['xl/_rels/workbook.xml.rels']) : Promise.resolve('');
+        var ssPromise = entries['xl/sharedstrings.xml'] ? decodeZipEntryText(archive.bytes, entries['xl/sharedstrings.xml']) : Promise.resolve('');
+
+        return Promise.all([wbPromise, relsPromise, ssPromise]).then(function (parts) {
+          var sheetPath = resolveFirstSheetPath(entries, parts[0], parts[1]);
+          if (!sheetPath || !entries[sheetPath]) {
+            throw new Error(t('.xlsx 파일 안에 읽을 수 있는 워크시트(Sheet)가 없습니다.', 'No readable worksheet found inside the .xlsx file.'));
+          }
+          return decodeZipEntryText(archive.bytes, entries[sheetPath]).then(function (sheetXml) {
+            return parseXlsxXmlSheet(sheetXml, parts[2]);
+          });
+        });
+      }
+
+      var decoded = decodeCsvBytes(buf);
+      return parseDelimitedText(decoded);
+    });
+  }
+
+  function getSampleTemplateRows() {
+    if (currentLang === 'en') {
+      return [
+        ['Product Name', 'Selling Price', 'Seller Discount', 'COGS', 'Fee (%)', 'Seller Shipping', 'Customer Shipping', 'Ad Spend (Per Unit)', 'Qty'],
+        ['Cordless Mini Humidifier', 29900, 2000, 11000, 5.5, 3000, 0, 5000, 18],
+        ['Silicone Dish Mat 2P', 15900, 1000, 4800, 10.8, 2800, 3000, 2500, 32],
+        ['Insulated Tumbler 600ml (Loss Risk)', 18900, 3000, 8200, 10.8, 3000, 0, 6200, 12],
+        ['Eco Tote Bag Pack', 24500, 0, 7900, 3500, 2700, 0, 3000, 25]
+      ];
+    }
+    return [
+      ['상품명', '판매가', '판매자할인', '매입원가', '수수료(%)', '실택배비', '고객배송비', '광고비(건당)', '수량'],
+      ['무선 미니 가습기', 29900, 2000, 11000, 5.5, 3000, 0, 5000, 18],
+      ['실리콘 주방 매트 2P', 15900, 1000, 4800, 10.8, 2800, 3000, 2500, 32],
+      ['보온 텀블러 600ml (적자주의)', 18900, 3000, 8200, 10.8, 3000, 0, 6200, 12],
+      ['친환경 캔버스 에코백', 24500, 0, 7900, 3500, 2700, 0, 3000, 25]
+    ];
+  }
+
+  function downloadSampleExcelTemplate() {
+    var rows = getSampleTemplateRows();
+    return downloadCsv('seller-math-excel-template.csv', rows);
+  }
+
+  function getSamplePasteString() {
+    return getSampleTemplateRows()
+      .map(function (r) {
+        return r.join('\t');
+      })
+      .join('\n');
+  }
+
+  function mountBulkExcelWidget(container, options) {
+    if (!container || typeof document === 'undefined') return null;
+
+    var opts = options || {};
+    var getBase = typeof opts.getBaseInputs === 'function' ? opts.getBaseInputs : loadSharedInputs;
+
+    var state = {
+      sourceName: '',
+      rawRows: null,
+      headers: [],
+      dataRows: [],
+      mapping: null,
+      batchResult: null,
+      pasteText: '',
+      errorMsg: '',
+      noticeMsg: ''
+    };
+
+    function recompute() {
+      if (!state.dataRows || state.dataRows.length === 0) {
+        state.batchResult = null;
+        return;
+      }
+      state.batchResult = computeBatchRows(state.dataRows, state.mapping, getBase());
+    }
+
+    function applyParsedRows(rows, sourceLabel) {
+      state.errorMsg = '';
+      state.noticeMsg = '';
+      if (!Array.isArray(rows) || rows.length < 2) {
+        state.rawRows = null;
+        state.headers = [];
+        state.dataRows = [];
+        state.mapping = null;
+        state.batchResult = null;
+        state.errorMsg = t(
+          '머리글(1행)과 데이터(2행 이상)가 포함된 파일이나 표를 넣어주세요.',
+          'Please provide at least a header row and 1 data row.'
+        );
+        render();
+        return;
+      }
+
+      var detected = findBestHeaderRow(rows);
+      state.sourceName = sourceLabel || '';
+      state.rawRows = rows;
+      state.headers = detected.headers;
+      state.dataRows = detected.dataRows;
+      state.mapping = detected.mapping;
+      recompute();
+      render();
+    }
+
+    function handleFileSelection(file) {
+      if (!file) return;
+      state.errorMsg = '';
+      state.noticeMsg = '';
+      parseSpreadsheetFile(file).then(
+        function (rows) {
+          applyParsedRows(rows, file.name);
+        },
+        function (err) {
+          state.rawRows = null;
+          state.batchResult = null;
+          state.errorMsg = (err && err.message) || t('파일을 해석하지 못했습니다.', 'Failed to parse spreadsheet file.');
+          render();
+        }
+      );
+    }
+
+    function handleBatchCsvDownload() {
+      if (!state.batchResult || !state.batchResult.rows.length) return;
+      var header = [
+        t('상품명', 'Product'),
+        t('수량', 'Qty'),
+        t('정상가(원)', 'List Price'),
+        t('고객 실결제가(원)', 'Customer Payment'),
+        t('마켓 수수료(원)', 'Platform Fee'),
+        t('예상 정산입금액(원)', 'Est. Payout'),
+        t('건당 순이익(원)', 'Unit Net Profit'),
+        t('합계 순이익(원)', 'Total Net Profit'),
+        t('순마진율(%)', 'Net Margin (%)'),
+        t('손익분기 ROAS(%)', 'Break-even ROAS (%)'),
+        t('수익 상태', 'Status')
+      ];
+      var csvRows = [header];
+      state.batchResult.rows.forEach(function (item) {
+        var marginVal = item.profit.netMarginRate !== null ? Number(item.profit.netMarginRate.toFixed(2)) : '-';
+        var roasVal = item.roas.isAchievable ? Number(item.roas.breakEvenRoas.toFixed(1)) : '-';
+        csvRows.push([
+          item.inputs.itemName,
+          { value: item.quantity, numeric: true },
+          { value: Math.round(item.inputs.listPrice), numeric: true },
+          { value: Math.round(item.profit.customerPayment), numeric: true },
+          { value: Math.round(item.profit.feeTotalInput), numeric: true },
+          { value: Math.round(item.profit.platformSettlement), numeric: true },
+          { value: Math.round(item.profit.operatingProfit), numeric: true },
+          { value: Math.round(item.totalProfit), numeric: true },
+          typeof marginVal === 'number' ? { value: marginVal, numeric: true } : marginVal,
+          typeof roasVal === 'number' ? { value: roasVal, numeric: true } : roasVal,
+          item.isLoss ? t('적자 주의', 'Loss Risk') : t('흑자', 'Profitable')
+        ]);
+      });
+      var filename = 'seller-math-batch-' + new Date().toISOString().slice(0, 10) + '.csv';
+      downloadCsv(filename, csvRows);
+    }
+
+    function handleSaveAllScenarios() {
+      if (!state.batchResult || !state.batchResult.rows.length) return;
+      var items = state.batchResult.rows;
+      var limit = Math.min(items.length, MAX_SCENARIOS);
+      var beforeCount = loadScenarios().length;
+      for (var i = limit - 1; i >= 0; i--) {
+        saveScenario(items[i].inputs.itemName, items[i].profit);
+      }
+      var afterCount = loadScenarios().length;
+      state.noticeMsg = t(
+        '상위 ' + limit + '개 품목을 시나리오 비교함에 추가했습니다. (현재 저장: ' + afterCount + '개 / 최대 ' + MAX_SCENARIOS + '개)',
+        'Added top ' + limit + ' items to Scenario Comparison (Saved: ' + afterCount + ' / max ' + MAX_SCENARIOS + ').'
+      );
+      if (typeof opts.onScenariosSaved === 'function') {
+        opts.onScenariosSaved(beforeCount, afterCount);
+      }
+      render();
+    }
+
+    function renderSummaryCard(label, valueText, subText, toneClass) {
+      var card = createEl('div', 'bulk-summary-card' + (toneClass ? ' ' + toneClass : ''));
+      card.appendChild(createEl('div', 'bulk-summary-label', label));
+      card.appendChild(createEl('div', 'bulk-summary-val', valueText));
+      if (subText) {
+        card.appendChild(createEl('div', 'bulk-summary-sub', subText));
+      }
+      return card;
+    }
+
+    function render() {
+      clearEl(container);
+
+      var header = createEl('div', 'bulk-excel-header');
+      var titleBox = createEl('div');
+      titleBox.appendChild(
+        createEl(
+          'h2',
+          'card-title',
+          t('엑셀(.xlsx · .csv) & 표 붙여넣기 일괄 수익 계산기', 'Excel (.xlsx / .csv) & Table Paste Batch Calculator')
+        )
+      );
+      titleBox.appendChild(
+        createEl(
+          'p',
+          'card-subtitle',
+          t(
+            '매출·원가 엑셀 파일을 끌어다 놓거나 표를 Ctrl+V로 붙여넣으면 여러 상품의 정산액·순이익·적자 여부를 1초 만에 일괄 계산합니다.',
+            'Drop your Excel/CSV sheet or paste cells (Ctrl+V) to compute settlement, net profit, and loss alerts across all SKUs at once.'
+          )
+        )
+      );
+      header.appendChild(titleBox);
+      header.appendChild(
+        createEl(
+          'span',
+          'bulk-privacy-badge',
+          t('🔒 서버 전송 0% · 내 브라우저에서만 계산', '🔒 100% Local · Never leaves your browser')
+        )
+      );
+      container.appendChild(header);
+
+      // Drag & Drop + File Input
+      var dropLabel = createEl('label', 'excel-dropzone');
+      var fileInput = createEl('input', 'excel-file-input');
+      fileInput.type = 'file';
+      fileInput.accept = '.xlsx,.csv,.tsv,.txt';
+      fileInput.addEventListener('change', function (e) {
+        var f = e.target && e.target.files && e.target.files[0];
+        if (f) handleFileSelection(f);
+      });
+
+      dropLabel.appendChild(fileInput);
+      dropLabel.appendChild(createEl('div', 'excel-dropzone-icon', '📊'));
+      dropLabel.appendChild(
+        createEl(
+          'div',
+          'excel-dropzone-title',
+          t('여기를 클릭하거나 엑셀(.xlsx, .csv, .tsv) 파일을 끌어다 놓으세요', 'Click to choose or drag & drop .xlsx / .csv / .tsv here')
+        )
+      );
+      dropLabel.appendChild(
+        createEl(
+          'div',
+          'excel-dropzone-sub',
+          t(
+            '스마트스토어·쿠팡 정산 시트, 개인 매출장부 모두 지원 · 현재 화면의 과세자/VAT 기준이 그대로 적용됩니다.',
+            'Works with marketplace exports or custom sheets · Automatically applies your active VAT/taxpayer settings.'
+          )
+        )
+      );
+
+      dropLabel.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        dropLabel.classList.add('is-dragover');
+      });
+      dropLabel.addEventListener('dragleave', function () {
+        dropLabel.classList.remove('is-dragover');
+      });
+      dropLabel.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dropLabel.classList.remove('is-dragover');
+        var files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files[0]) handleFileSelection(files[0]);
+      });
+      container.appendChild(dropLabel);
+
+      // Paste Area + Action Row
+      var pasteWrap = createEl('div', 'excel-paste-wrap');
+      var labelRow = createEl('div', 'excel-paste-label-row');
+      var pasteLbl = createEl(
+        'label',
+        'form-label',
+        t('또는 엑셀/구글시트 표를 복사(Ctrl+C)해 바로 붙여넣기(Ctrl+V)', 'Or copy table rows from Excel/Sheets and paste here (Ctrl+V)')
+      );
+      var pasteId = 'bulk-paste-' + (container.id || 'widget');
+      pasteLbl.setAttribute('for', pasteId);
+      labelRow.appendChild(pasteLbl);
+      pasteWrap.appendChild(labelRow);
+
+      var textarea = createEl('textarea', 'excel-paste-area');
+      textarea.id = pasteId;
+      textarea.value = state.pasteText;
+      textarea.placeholder = t(
+        '예시) 첫 줄은 제목행(상품명, 판매가, 원가, 수수료, 택배비, 수량)\n무선 미니 가습기\t29900\t11000\t5.5\t3000\t10',
+        'Example) Header row first (Product, Price, COGS, Fee, Shipping, Qty)\nMini Humidifier\t29900\t11000\t5.5\t3000\t10'
+      );
+      textarea.addEventListener('input', function () {
+        state.pasteText = textarea.value;
+      });
+      textarea.addEventListener('paste', function () {
+        setTimeout(function () {
+          state.pasteText = textarea.value;
+          if (state.pasteText.trim()) {
+            applyParsedRows(parseDelimitedText(state.pasteText), t('붙여넣은 표 데이터', 'Pasted Table Data'));
+          }
+        }, 0);
+      });
+      pasteWrap.appendChild(textarea);
+
+      var actionsRow = createEl('div', 'bulk-actions-row');
+      var calcPasteBtn = createEl('button', 'btn btn-primary', t('붙여넣은 표 일괄 계산하기', 'Calculate Pasted Rows'));
+      calcPasteBtn.type = 'button';
+      calcPasteBtn.addEventListener('click', function () {
+        state.pasteText = textarea.value;
+        applyParsedRows(parseDelimitedText(state.pasteText), t('붙여넣은 표 데이터', 'Pasted Table Data'));
+      });
+
+      var sampleFillBtn = createEl('button', 'btn btn-secondary', t('샘플 데이터로 체험하기', 'Try Sample Data'));
+      sampleFillBtn.type = 'button';
+      sampleFillBtn.addEventListener('click', function () {
+        state.pasteText = getSamplePasteString();
+        applyParsedRows(parseDelimitedText(state.pasteText), t('샘플 셀러 매출장부 (4종)', 'Sample Seller Sheet (4 SKUs)'));
+      });
+
+      var downloadTplBtn = createEl('button', 'btn btn-outline', t('샘플 엑셀(CSV) 양식 받기', 'Download Sample CSV'));
+      downloadTplBtn.type = 'button';
+      downloadTplBtn.addEventListener('click', function () {
+        downloadSampleExcelTemplate();
+      });
+
+      actionsRow.appendChild(calcPasteBtn);
+      actionsRow.appendChild(sampleFillBtn);
+      actionsRow.appendChild(downloadTplBtn);
+
+      if (state.rawRows || state.pasteText) {
+        var clearBtn = createEl('button', 'btn btn-ghost', t('초기화', 'Clear'));
+        clearBtn.type = 'button';
+        clearBtn.addEventListener('click', function () {
+          state.sourceName = '';
+          state.rawRows = null;
+          state.headers = [];
+          state.dataRows = [];
+          state.mapping = null;
+          state.batchResult = null;
+          state.pasteText = '';
+          state.errorMsg = '';
+          state.noticeMsg = '';
+          render();
+        });
+        actionsRow.appendChild(clearBtn);
+      }
+
+      pasteWrap.appendChild(actionsRow);
+      container.appendChild(pasteWrap);
+
+      if (state.errorMsg) {
+        container.appendChild(createEl('div', 'bulk-error-banner', state.errorMsg));
+      }
+      if (state.noticeMsg) {
+        container.appendChild(createEl('div', 'status-pill status-positive', state.noticeMsg));
+      }
+
+      // Column Mapping Override Panel
+      if (state.headers.length > 0 && state.mapping) {
+        var details = createEl('details', 'column-map-panel');
+        var mappedCount = countMappedFields(state.mapping);
+        if (mappedCount < 2) details.open = true;
+
+        var summaryEl = createEl('summary', 'column-map-summary');
+        summaryEl.appendChild(
+          createEl(
+            'span',
+            '',
+            t(
+              '⚙️ 열 자동 매칭 설정 (' + mappedCount + '개 열 인식됨 · 필요시 직접 변경)',
+              '⚙️ Column Auto-Mapping (' + mappedCount + ' matched · click to adjust)'
+            )
+          )
+        );
+        summaryEl.appendChild(
+          createEl(
+            'span',
+            'bulk-summary-sub',
+            t('미매칭 열은 현재 계산기 설정값 적용', 'Unmapped fields use active settings')
+          )
+        );
+        details.appendChild(summaryEl);
+
+        var grid = createEl('div', 'column-map-grid');
+        BULK_FIELD_SPECS.forEach(function (spec) {
+          var item = createEl('div', 'column-map-item');
+          var lbl = createEl('label', '', currentLang === 'en' ? spec.en : spec.ko);
+          var sel = createEl('select', 'select-control');
+          var selId = 'bulk-map-' + spec.key + '-' + (container.id || 'w');
+          sel.id = selId;
+          lbl.setAttribute('for', selId);
+
+          var noneOpt = createEl('option', '', t('-- 미지정 (현재 설정값 사용) --', '-- Unmapped (Use active setting) --'));
+          noneOpt.value = '-1';
+          sel.appendChild(noneOpt);
+
+          state.headers.forEach(function (h, idx) {
+            var opt = createEl('option', '', '[' + (idx + 1) + '열] ' + (h || t('(제목 없음)', '(Empty)')));
+            opt.value = String(idx);
+            sel.appendChild(opt);
+          });
+
+          sel.value = String(state.mapping[spec.key]);
+          sel.addEventListener('change', function () {
+            state.mapping[spec.key] = parseInt(sel.value, 10);
+            recompute();
+            render();
+          });
+
+          item.appendChild(lbl);
+          item.appendChild(sel);
+          grid.appendChild(item);
+        });
+
+        details.appendChild(grid);
+        container.appendChild(details);
+      }
+
+      // Results Section
+      if (state.batchResult) {
+        var res = state.batchResult;
+        var sum = res.summary;
+        var resSection = createEl('div', 'bulk-results-section');
+
+        var toolbar = createEl('div', 'bulk-toolbar-row');
+        var statusLabel = t(
+          '📄 ' + (state.sourceName || '입력 데이터') + ' · 총 ' + sum.skuCount + '개 품목 (' + formatNumber(sum.totalUnits) + '건)',
+          '📄 ' + (state.sourceName || 'Input') + ' · ' + sum.skuCount + ' SKUs (' + formatNumber(sum.totalUnits) + ' units)'
+        );
+        if (res.skippedCount > 0) {
+          statusLabel += t(' · 공백/요약행 ' + res.skippedCount + '건 제외', ' · ' + res.skippedCount + ' blank/summary rows skipped');
+        }
+        toolbar.appendChild(createEl('div', 'bulk-file-status', statusLabel));
+
+        var exportRow = createEl('div', 'btn-row');
+        exportRow.style.marginTop = '0';
+        var dlResultBtn = createEl('button', 'btn btn-secondary btn-table-sm', t('전체 결과 엑셀(CSV) 다운로드', 'Export Results CSV'));
+        dlResultBtn.type = 'button';
+        dlResultBtn.addEventListener('click', handleBatchCsvDownload);
+
+        var addScenBtn = createEl('button', 'btn btn-outline btn-table-sm', t('시나리오 비교함에 일괄 추가', 'Add to Comparison'));
+        addScenBtn.type = 'button';
+        addScenBtn.addEventListener('click', handleSaveAllScenarios);
+
+        exportRow.appendChild(dlResultBtn);
+        exportRow.appendChild(addScenBtn);
+        toolbar.appendChild(exportRow);
+        resSection.appendChild(toolbar);
+
+        // Summary KPI Cards
+        var kpiGrid = createEl('div', 'bulk-summary-grid');
+        kpiGrid.appendChild(
+          renderSummaryCard(
+            t('총 실결제 매출', 'Total Customer Sales'),
+            formatCurrency(sum.totalCustomerPayment),
+            t(sum.skuCount + '개 품목 · 총 ' + formatNumber(sum.totalUnits) + '개', sum.skuCount + ' SKUs · ' + formatNumber(sum.totalUnits) + ' units'),
+            ''
+          )
+        );
+        kpiGrid.appendChild(
+          renderSummaryCard(
+            t('총 예상 정산액', 'Total Est. Payout'),
+            formatCurrency(sum.totalSettlement),
+            t('수수료·배송정산 반영', 'After platform fees & shipping'),
+            ''
+          )
+        );
+        kpiGrid.appendChild(
+          renderSummaryCard(
+            t('총 예상 순이익 (평균 마진율)', 'Total Net Profit (Avg Margin)'),
+            formatCurrency(sum.totalOperatingProfit),
+            t(
+              '평균 순마진율 ' + (sum.avgMarginRate !== null ? formatPercent(sum.avgMarginRate) : '-'),
+              'Avg margin ' + (sum.avgMarginRate !== null ? formatPercent(sum.avgMarginRate) : '-')
+            ),
+            sum.totalOperatingProfit >= 0 ? 'is-positive' : 'is-negative'
+          )
+        );
+        kpiGrid.appendChild(
+          renderSummaryCard(
+            t('적자 주의 상품', 'Loss-Making SKUs'),
+            sum.lossCount + t('개 품목', ' SKUs'),
+            sum.lossCount > 0 ? t('붉은 행의 원가·광고비를 점검하세요', 'Review highlighted red rows') : t('전 품목 흑자 상태', 'All items profitable'),
+            sum.lossCount > 0 ? 'is-negative' : 'is-positive'
+          )
+        );
+        resSection.appendChild(kpiGrid);
+
+        // Result Table
+        var wrap = createEl('div', 'table-responsive');
+        var table = createEl('table', 'data-table');
+        var thead = createEl('thead');
+        var hTr = createEl('tr');
+        [
+          t('상품명', 'Product'),
+          t('수량', 'Qty'),
+          t('판매가', 'List Price'),
+          t('예상 정산액(건당)', 'Payout/Unit'),
+          t('순이익(건당)', 'Profit/Unit'),
+          t('순이익(합계)', 'Total Profit'),
+          t('순마진율', 'Margin'),
+          t('손익분기 ROAS', 'BE ROAS'),
+          t('상세', 'Detail')
+        ].forEach(function (label) {
+          hTr.appendChild(createEl('th', '', label));
+        });
+        thead.appendChild(hTr);
+        table.appendChild(thead);
+
+        var tbody = createEl('tbody');
+        res.rows.forEach(function (item) {
+          var tr = createEl('tr', item.isLoss ? 'bulk-row-loss' : '');
+
+          var nameTd = createEl('td', 'bulk-item-name', item.inputs.itemName);
+          tr.appendChild(nameTd);
+          tr.appendChild(createEl('td', '', formatNumber(item.quantity)));
+          tr.appendChild(createEl('td', '', formatCurrency(item.inputs.listPrice)));
+          tr.appendChild(createEl('td', '', formatCurrency(item.profit.platformSettlement)));
+
+          var unitProfitClass = item.profit.operatingProfit >= 0 ? 'bulk-profit-pos' : 'bulk-profit-neg';
+          tr.appendChild(createEl('td', unitProfitClass, formatCurrency(item.profit.operatingProfit)));
+          tr.appendChild(createEl('td', unitProfitClass, formatCurrency(item.totalProfit)));
+          tr.appendChild(createEl('td', unitProfitClass, item.profit.netMarginLabel));
+          tr.appendChild(createEl('td', '', item.roas.breakEvenRoasLabel));
+
+          var actionTd = createEl('td');
+          var detailBtn = createEl('button', 'btn btn-outline btn-table-sm', t('상세 보기', 'Inspect'));
+          detailBtn.type = 'button';
+          detailBtn.addEventListener('click', function () {
+            saveSharedInputs(item.inputs);
+            if (typeof opts.onSelectRow === 'function') {
+              opts.onSelectRow(item.inputs, item);
+            } else {
+              window.location.href = 'profit-calculator.html';
+            }
+          });
+          actionTd.appendChild(detailBtn);
+          tr.appendChild(actionTd);
+
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        resSection.appendChild(wrap);
+
+        container.appendChild(resSection);
+      }
+    }
+
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('sellermath:langchange', function () {
+        recompute();
+        render();
+      });
+    }
+
+    render();
+    return {
+      recalculate: function () {
+        recompute();
+        render();
+      },
+      getState: function () {
+        return state;
+      }
+    };
+  }
+
   return {
     DEFAULT_INPUTS: DEFAULT_INPUTS,
     FEE_BASIS_LABELS: FEE_BASIS_LABELS,
@@ -1896,6 +3095,12 @@
     createEl: createEl,
     clearEl: clearEl,
     renderWaterfallBreakdown: renderWaterfallBreakdown,
-    renderScenarioTable: renderScenarioTable
+    renderScenarioTable: renderScenarioTable,
+    parseDelimitedText: parseDelimitedText,
+    detectColumnMapping: detectColumnMapping,
+    computeBatchRows: computeBatchRows,
+    parseSpreadsheetFile: parseSpreadsheetFile,
+    downloadSampleExcelTemplate: downloadSampleExcelTemplate,
+    mountBulkExcelWidget: mountBulkExcelWidget
   };
 });

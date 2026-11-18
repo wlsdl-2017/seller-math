@@ -88,6 +88,11 @@
         </div>
       </section>
 
+      <!-- 엑셀(.xlsx/.csv) & 표 붙여넣기 일괄 계산기 -->
+      <section class="card" aria-label="엑셀 파일 일괄 계산기">
+        <div id="bulk-excel-container"></div>
+      </section>
+
       <!-- 3대 계산기 탐색 허브 -->
       <section class="hub-grid" aria-label="핵심 계산기 바로가기">
         <article class="hub-card">
@@ -352,6 +357,7 @@
         var sample = SM.cloneDefaults();
         SM.saveSharedInputs(sample);
         renderDashboard();
+        if (bulkExcelWidget && bulkExcelWidget.getState().dataRows.length > 0) bulkExcelWidget.recalculate();
       });
 
       document.getElementById('btn-load-sample-33k').addEventListener('click', function () {
@@ -367,9 +373,17 @@
         });
         SM.saveSharedInputs(sample);
         renderDashboard();
+        if (bulkExcelWidget && bulkExcelWidget.getState().dataRows.length > 0) bulkExcelWidget.recalculate();
       });
 
       SM.initI18n(PAGE_DICT, 'SELLER MATH | E-Commerce Seller Profit, ROAS & Pricing Dashboard');
+      var bulkExcelWidget = SM.mountBulkExcelWidget(document.getElementById('bulk-excel-container'), {
+        getBaseInputs: SM.loadSharedInputs,
+        onSelectRow: function (rowInputs) {
+          SM.saveSharedInputs(rowInputs);
+          window.location.href = 'profit-calculator.html';
+        }
+      });
       window.addEventListener('sellermath:langchange', renderDashboard);
       renderDashboard();
     })();

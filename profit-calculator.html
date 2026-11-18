@@ -280,6 +280,11 @@
         </div>
       </div>
 
+      <!-- 엑셀(.xlsx/.csv) & 표 붙여넣기 일괄 계산기 -->
+      <section class="card" aria-label="엑셀 파일 일괄 계산기">
+        <div id="bulk-excel-container"></div>
+      </section>
+
       <!-- 시나리오 비교 및 CSV 내보내기 -->
       <section class="card" aria-label="저장된 상품 시나리오 비교">
         <div id="scenario-container"></div>
@@ -757,6 +762,32 @@
 
       document.getElementById('btn-print-page').addEventListener('click', function () {
         window.print();
+      });
+
+      var bulkExcelWidget = SM.mountBulkExcelWidget(document.getElementById('bulk-excel-container'), {
+        getBaseInputs: readInputsFromForm,
+        onSelectRow: function (rowInputs) {
+          SM.saveSharedInputs(rowInputs);
+          writeInputsToForm(rowInputs);
+          renderResults();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          showToast(
+            SM.t(
+              '선택한 상품("' + rowInputs.itemName + '")을 상단 정밀 계산기에 불러왔습니다.',
+              'Loaded "' + rowInputs.itemName + '" into the detailed calculator.'
+            )
+          );
+        },
+        onScenariosSaved: function () {
+          refreshScenarios();
+          showToast(SM.t('일괄 계산 품목들을 시나리오 비교함에 저장했습니다.', 'Batch items added to scenario table.'));
+        }
+      });
+
+      form.addEventListener('change', function () {
+        if (bulkExcelWidget && bulkExcelWidget.getState().dataRows.length > 0) {
+          bulkExcelWidget.recalculate();
+        }
       });
 
       SM.initI18n(PAGE_DICT, 'E-Commerce Profit, Margin & Settlement Calculator | SELLER MATH');
