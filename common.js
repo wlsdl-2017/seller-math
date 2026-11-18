@@ -16,9 +16,40 @@
 
   var STORAGE_KEY_STATE = 'seller_math_shared_state_v1';
   var STORAGE_KEY_SCENARIOS = 'seller_math_scenarios_v1';
+  var STORAGE_KEY_LANG = 'seller_math_lang_v1';
   var MAX_SCENARIOS = 30;
   var VAT_RATE = 0.1;
   var EPSILON = 1e-9;
+
+  function detectInitialLang() {
+    try {
+      if (typeof window !== 'undefined' && window.location && window.location.search) {
+        var params = new URLSearchParams(window.location.search);
+        var qLang = params.get('lang');
+        if (qLang === 'en' || qLang === 'ko') {
+          if (window.localStorage) window.localStorage.setItem(STORAGE_KEY_LANG, qLang);
+          return qLang;
+        }
+      }
+      if (typeof window !== 'undefined' && window.localStorage) {
+        var stored = window.localStorage.getItem(STORAGE_KEY_LANG);
+        if (stored === 'en' || stored === 'ko') return stored;
+      }
+    } catch (e) {
+      // ignore blocked storage
+    }
+    return 'ko';
+  }
+
+  var currentLang = detectInitialLang();
+
+  function getLang() {
+    return currentLang;
+  }
+
+  function t(koStr, enStr) {
+    return currentLang === 'en' ? enStr : koStr;
+  }
 
   var DEFAULT_INPUTS = {
     itemName: '기본 테스트 상품',
@@ -82,6 +113,38 @@
     simplified: '간이과세자',
     exempt: '면세사업자'
   };
+
+  var FEE_BASIS_LABELS_EN = {
+    seller_revenue: 'Proportional to Seller Product Revenue',
+    customer_payment: 'Proportional to Customer Payment',
+    total_payment_with_shipping: 'Proportional to Payment Incl. Shipping',
+    custom_basis: 'Custom Fee Basis'
+  };
+
+  var AD_REVENUE_BASIS_LABELS_EN = {
+    seller_revenue: 'Seller Product Revenue',
+    customer_payment: 'Customer Payment (Product Price)',
+    total_payment_with_shipping: 'Total Customer Payment Incl. Shipping',
+    recognized_net_revenue: 'Recognized Net Revenue (Selected VAT Basis)'
+  };
+
+  var TAXPAYER_LABELS_EN = {
+    general: 'General Taxpayer (10% VAT)',
+    simplified: 'Simplified Taxpayer',
+    exempt: 'VAT-Exempt Business'
+  };
+
+  function getFeeBasisLabel(mode) {
+    return currentLang === 'en' ? FEE_BASIS_LABELS_EN[mode] : FEE_BASIS_LABELS[mode];
+  }
+
+  function getAdRevenueBasisLabel(mode) {
+    return currentLang === 'en' ? AD_REVENUE_BASIS_LABELS_EN[mode] : AD_REVENUE_BASIS_LABELS[mode];
+  }
+
+  function getTaxpayerLabel(type) {
+    return currentLang === 'en' ? TAXPAYER_LABELS_EN[type] : TAXPAYER_LABELS[type];
+  }
 
   function cloneDefaults() {
     return Object.assign({}, DEFAULT_INPUTS);
@@ -256,10 +319,10 @@
     var deductibleNames = [];
     var nonDeductibleNames = [];
     var costEntries = [
-      { label: '상품 원가', obj: cogsVat },
-      { label: '마켓 수수료', obj: feeVat },
-      { label: '배송 원가', obj: shipVat },
-      { label: '광고비', obj: adVat }
+      { label: t('상품 원가', 'COGS'), obj: cogsVat },
+      { label: t('마켓 수수료', 'Marketplace Fee'), obj: feeVat },
+      { label: t('배송 원가', 'Shipping Cost'), obj: shipVat },
+      { label: t('광고비', 'Ad Spend'), obj: adVat }
     ];
     costEntries.forEach(function (entry) {
       if (entry.obj.vatDeductible) {
@@ -272,17 +335,26 @@
     if (type === 'exempt') {
       return {
         taxpayerType: 'exempt',
-        taxpayerLabel: TAXPAYER_LABELS.exempt,
+        taxpayerLabel: getTaxpayerLabel('exempt'),
         status: 'ok',
         outputVat: 0,
         deductibleInputVat: 0,
         estimatedVatPayable: 0,
-        displayAmount: '0원 (부가세 면세)',
+        displayAmount: t('0원 (부가세 면세)', '0 KRW (VAT Exempt)'),
         assumptions: [
-          '면세사업자는 매출에 대한 부가가치세 신고·납부 의무가 없습니다.',
-          '매입 비용(수수료·택배비·광고비 등)에 포함된 부가세는 환급·공제되지 않으므로 실제 현금 지출(VAT 포함) 기준으로 손익을 확인하는 것이 정확합니다.'
+          t(
+            '면세사업자는 매출에 대한 부가가치세 신고·납부 의무가 없습니다.',
+            'VAT-exempt businesses have no output VAT filing or remittance obligation on sales.'
+          ),
+          t(
+            '매입 비용(수수료·택배비·광고비 등)에 포함된 부가세는 환급·공제되지 않으므로 실제 현금 지출(VAT 포함) 기준으로 손익을 확인하는 것이 정확합니다.',
+            'Input VAT paid on fees, shipping, and ads is not creditable/refundable; evaluate P&L on the VAT-inclusive cash basis.'
+          )
         ],
-        excludedNote: '면세사업자 사업장현황신고 및 종합소득세는 별도 세목이며 본 추정치에 포함되지 않습니다.'
+        excludedNote: t(
+          '면세사업자 사업장현황신고 및 종합소득세는 별도 세목이며 본 추정치에 포함되지 않습니다.',
+          'Business status reporting and annual income tax are separate obligations and excluded from this estimate.'
+        )
       };
     }
 
@@ -290,17 +362,26 @@
       if (inp.simplifiedValueAddedRate === null || inp.simplifiedValueAddedRate <= 0) {
         return {
           taxpayerType: 'simplified',
-          taxpayerLabel: TAXPAYER_LABELS.simplified,
+          taxpayerLabel: getTaxpayerLabel('simplified'),
           status: 'incomplete',
           outputVat: null,
           deductibleInputVat: null,
           estimatedVatPayable: null,
-          displayAmount: '산출 보류 (필수 정보 미입력)',
+          displayAmount: t('산출 보류 (필수 정보 미입력)', 'Pending (Required Industry Rate Missing)'),
           assumptions: [
-            '간이과세자는 업종별 부가가치율(예: 소매업 15% 등)과 적격증빙(세금계산서·현금영수증·사업용카드) 수취 여부에 따라 세액이 크게 달라집니다.',
-            '고급 설정에서 [업종별 부가가치율(%)]을 직접 입력하기 전에는 임의의 확정 세액을 산출하지 않습니다.'
+            t(
+              '간이과세자는 업종별 부가가치율(예: 소매업 15% 등)과 적격증빙(세금계산서·현금영수증·사업용카드) 수취 여부에 따라 세액이 크게 달라집니다.',
+              'Simplified taxpayer VAT depends heavily on the industry value-added rate (e.g., 15% retail) and qualified tax invoices.'
+            ),
+            t(
+              '고급 설정에서 [업종별 부가가치율(%)]을 직접 입력하기 전에는 임의의 확정 세액을 산출하지 않습니다.',
+              'No arbitrary tax estimate is computed until the Industry Value-Added Rate (%) is explicitly entered in Advanced Settings.'
+            )
           ],
-          excludedNote: '직전 연도 공급대가 4,800만 원 미만(또는 법령상 납부의무 면제 기준) 해당 여부 및 연 매출 규모는 건당 계산기에서 판단하지 않습니다.'
+          excludedNote: t(
+            '직전 연도 공급대가 4,800만 원 미만(또는 법령상 납부의무 면제 기준) 해당 여부 및 연 매출 규모는 건당 계산기에서 판단하지 않습니다.',
+            'Annual revenue thresholds for VAT exemption eligibility are not evaluated in this per-order calculator.'
+          )
         };
       }
       var vaRate = inp.simplifiedValueAddedRate / 100;
@@ -316,18 +397,30 @@
 
       return {
         taxpayerType: 'simplified',
-        taxpayerLabel: TAXPAYER_LABELS.simplified,
+        taxpayerLabel: getTaxpayerLabel('simplified'),
         status: 'ok',
         outputVat: simplifiedGrossVat,
         deductibleInputVat: simplifiedCredit,
         estimatedVatPayable: simplifiedNetVat,
         displayAmount: formatCurrency(simplifiedNetVat),
         assumptions: [
-          '적용 기준: 공급대가(VAT 포함 매출) × 10% × 업종별 부가가치율(' + inp.simplifiedValueAddedRate + '%)',
-          '공제 기준: 적격증빙 공제 가능 항목(' + (deductibleNames.length ? deductibleNames.join(', ') : '없음') + ') 매입대가 × ' + inp.simplifiedInputCreditRate + '% (환급 불가)',
-          '불공제 처리 항목: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : '없음')
+          t(
+            '적용 기준: 공급대가(VAT 포함 매출) × 10% × 업종별 부가가치율(' + inp.simplifiedValueAddedRate + '%)',
+            'Applied Basis: Gross Revenue × 10% × Industry Value-Added Rate (' + inp.simplifiedValueAddedRate + '%)'
+          ),
+          t(
+            '공제 기준: 적격증빙 공제 가능 항목(' + (deductibleNames.length ? deductibleNames.join(', ') : '없음') + ') 매입대가 × ' + inp.simplifiedInputCreditRate + '% (환급 불가)',
+            'Credit Basis: Qualified items (' + (deductibleNames.length ? deductibleNames.join(', ') : 'None') + ') × ' + inp.simplifiedInputCreditRate + '% (Non-refundable)'
+          ),
+          t(
+            '불공제 처리 항목: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : '없음'),
+            'Non-deductible items: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : 'None')
+          )
         ],
-        excludedNote: '간이과세자 부가가치세 납부의무 면제 기준(직전 연도 공급대가 기준) 및 전자세금계산서 발급 의무 여부는 연간 매출에 따라 달라지므로 제외되었습니다.'
+        excludedNote: t(
+          '간이과세자 부가가치세 납부의무 면제 기준(직전 연도 공급대가 기준) 및 전자세금계산서 발급 의무 여부는 연간 매출에 따라 달라지므로 제외되었습니다.',
+          'Annual VAT payment exemption thresholds and e-invoice obligations depend on annual turnover and are excluded.'
+        )
       };
     }
 
@@ -342,21 +435,33 @@
 
     return {
       taxpayerType: 'general',
-      taxpayerLabel: TAXPAYER_LABELS.general,
+      taxpayerLabel: getTaxpayerLabel('general'),
       status: 'ok',
       outputVat: outputVat,
       deductibleInputVat: deductibleInputVat,
       estimatedVatPayable: estimatedVatPayable,
       displayAmount:
         estimatedVatPayable >= 0
-          ? formatCurrency(estimatedVatPayable) + ' (납부 예상)'
-          : formatCurrency(Math.abs(estimatedVatPayable)) + ' (매입세액 초과·환급 예상)',
+          ? formatCurrency(estimatedVatPayable) + t(' (납부 예상)', ' (Est. Payable)')
+          : formatCurrency(Math.abs(estimatedVatPayable)) + t(' (매입세액 초과·환급 예상)', ' (Est. Refundable Credit)'),
       assumptions: [
-        '매출세액: 총 매출(' + formatCurrency(revVat.cash) + ')의 공급가액 기준 10% (' + formatCurrency(outputVat) + ')',
-        '적격증빙 매입세액 공제 반영 항목: ' + (deductibleNames.length ? deductibleNames.join(', ') : '없음 (모두 불공제)'),
-        '매입세액 공제 제외(불공제) 항목: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : '없음')
+        t(
+          '매출세액: 총 매출(' + formatCurrency(revVat.cash) + ')의 공급가액 기준 10% (' + formatCurrency(outputVat) + ')',
+          'Output VAT: 10% on supply value of gross revenue ' + formatCurrency(revVat.cash) + ' (' + formatCurrency(outputVat) + ')'
+        ),
+        t(
+          '적격증빙 매입세액 공제 반영 항목: ' + (deductibleNames.length ? deductibleNames.join(', ') : '없음 (모두 불공제)'),
+          'Credited Input VAT items: ' + (deductibleNames.length ? deductibleNames.join(', ') : 'None')
+        ),
+        t(
+          '매입세액 공제 제외(불공제) 항목: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : '없음'),
+          'Non-deductible items: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : 'None')
+        )
       ],
-      excludedNote: '신용카드 매출전표 발행세액공제, 의제매입세액공제, 종합소득세·법인세, 4대 보험 및 고정 인건비는 본 건당 계산에서 제외되며 실제 세무 신고 결과와 다를 수 있습니다.'
+      excludedNote: t(
+        '신용카드 매출전표 발행세액공제, 의제매입세액공제, 종합소득세·법인세, 4대 보험 및 고정 인건비는 본 건당 계산에서 제외되며 실제 세무 신고 결과와 다를 수 있습니다.',
+        'Card sales tax credits, deemed input credits, corporate/income taxes, and fixed payroll are excluded; actual filings may differ.'
+      )
     };
   }
 
@@ -432,9 +537,9 @@
 
     // 6. 마진율 및 ROI 예외 방어
     var netMarginRate = null;
-    var netMarginLabel = '산출 불가 (매출 0원)';
+    var netMarginLabel = t('산출 불가 (매출 0원)', 'N/A (Zero Revenue)');
     var contributionMarginRate = null;
-    var contributionMarginLabel = '산출 불가 (매출 0원)';
+    var contributionMarginLabel = t('산출 불가 (매출 0원)', 'N/A (Zero Revenue)');
 
     if (recognizedRevenue > EPSILON) {
       netMarginRate = (operatingProfit / recognizedRevenue) * 100;
@@ -444,7 +549,7 @@
     }
 
     var roi = null;
-    var roiLabel = '산출 불가 (원가 0원)';
+    var roiLabel = t('산출 불가 (원가 0원)', 'N/A (Zero COGS)');
     if (recognizedCogs > EPSILON) {
       roi = (operatingProfit / recognizedCogs) * 100;
       roiLabel = formatPercent(roi);
@@ -463,8 +568,8 @@
 
     var accountingBasisLabel =
       inp.accountingBasis === 'supply_basis'
-        ? '공급가액 손익 기준 (적격증빙 매입세액 공제 반영)'
-        : 'VAT 포함 현금 기준 (실제 현금 유출입 기준)';
+        ? t('공급가액 손익 기준 (적격증빙 매입세액 공제 반영)', 'Supply-Value P&L Basis (Deductible Input VAT Excluded)')
+        : t('VAT 포함 현금 기준 (실제 현금 유출입 기준)', 'VAT-Inclusive Cash Basis (Actual Cash Flow)');
 
     return {
       inputs: inp,
@@ -480,7 +585,7 @@
       customerShipping: inp.customerShipping,
       totalGrossRevenueInput: totalGrossRevenueInput,
       feeBasisAmount: feeBasisAmount,
-      feeBasisLabel: FEE_BASIS_LABELS[inp.feeBasisMode],
+      feeBasisLabel: getFeeBasisLabel(inp.feeBasisMode),
       feeProduct: feeProduct,
       feeShipping: feeShipping,
       feeTotalInput: feeTotalInput,
@@ -541,12 +646,12 @@
 
     var currentAdSpend = profitRes.recognizedAdSpend;
     var currentRoas = null;
-    var currentRoasLabel = '광고비 0원 (산출 제외)';
+    var currentRoasLabel = t('광고비 0원 (산출 제외)', '0 KRW Ad Spend (N/A)');
     if (currentAdSpend > EPSILON && adRevenue > EPSILON) {
       currentRoas = (adRevenue / currentAdSpend) * 100;
       currentRoasLabel = formatPercent(currentRoas);
     } else if (currentAdSpend > EPSILON && adRevenue <= EPSILON) {
-      currentRoasLabel = '귀속 매출 0원';
+      currentRoasLabel = t('귀속 매출 0원', 'Zero Attributed Revenue');
     }
 
     // 예외 방어: 공헌이익 C <= 0
@@ -554,15 +659,18 @@
       return {
         profitResult: profitRes,
         adRevenueBasis: inp.adRevenueBasis,
-        adRevenueBasisLabel: AD_REVENUE_BASIS_LABELS[inp.adRevenueBasis],
+        adRevenueBasisLabel: getAdRevenueBasisLabel(inp.adRevenueBasis),
         adRevenue: adRevenue,
         contributionMargin: C,
         isAchievable: false,
         maxCpa: null,
-        maxCpaLabel: '산출 불가 (적자 구조)',
+        maxCpaLabel: t('산출 불가 (적자 구조)', 'N/A (Loss Structure)'),
         breakEvenRoas: null,
-        breakEvenRoasLabel: '손익분기 달성 불가',
-        errorMessage: '광고비 차감 전 공헌이익이 0원 이하(적자)이므로 광고 집행으로 손익분기를 달성할 수 없습니다.',
+        breakEvenRoasLabel: t('손익분기 달성 불가', 'Unachievable'),
+        errorMessage: t(
+          '광고비 차감 전 공헌이익이 0원 이하(적자)이므로 광고 집행으로 손익분기를 달성할 수 없습니다.',
+          'Pre-ad contribution margin is 0 or negative (loss); break-even ROAS cannot be achieved through ad spend.'
+        ),
         currentAdSpend: currentAdSpend,
         currentRoas: currentRoas,
         currentRoasLabel: currentRoasLabel,
@@ -575,15 +683,18 @@
       return {
         profitResult: profitRes,
         adRevenueBasis: inp.adRevenueBasis,
-        adRevenueBasisLabel: AD_REVENUE_BASIS_LABELS[inp.adRevenueBasis],
+        adRevenueBasisLabel: getAdRevenueBasisLabel(inp.adRevenueBasis),
         adRevenue: adRevenue,
         contributionMargin: C,
         isAchievable: false,
         maxCpa: C,
         maxCpaLabel: formatCurrency(C),
         breakEvenRoas: null,
-        breakEvenRoasLabel: '산출 불가 (귀속 매출 0원)',
-        errorMessage: '선택된 광고 귀속 매출 기준 금액이 0원이므로 ROAS 백분율을 산출할 수 없습니다.',
+        breakEvenRoasLabel: t('산출 불가 (귀속 매출 0원)', 'N/A (Zero Attributed Revenue)'),
+        errorMessage: t(
+          '선택된 광고 귀속 매출 기준 금액이 0원이므로 ROAS 백분율을 산출할 수 없습니다.',
+          'Cannot compute ROAS percentage because selected ad-attributed revenue is 0.'
+        ),
         currentAdSpend: currentAdSpend,
         currentRoas: currentRoas,
         currentRoasLabel: currentRoasLabel,
@@ -613,12 +724,12 @@
           : null;
       var isBreakEven = Math.abs(roasPct - breakEvenRoas) < 1e-6;
       var status = isBreakEven
-        ? '손익분기'
+        ? t('손익분기', 'Break-Even')
         : expectedProfit > 0.5
-        ? '흑자'
+        ? t('흑자', 'Profit')
         : expectedProfit < -0.5
-        ? '적자'
-        : '손익분기';
+        ? t('적자', 'Loss')
+        : t('손익분기', 'Break-Even');
       return {
         roasPct: roasPct,
         isBreakEven: isBreakEven,
@@ -633,7 +744,7 @@
     return {
       profitResult: profitRes,
       adRevenueBasis: inp.adRevenueBasis,
-      adRevenueBasisLabel: AD_REVENUE_BASIS_LABELS[inp.adRevenueBasis],
+      adRevenueBasisLabel: getAdRevenueBasisLabel(inp.adRevenueBasis),
       adRevenue: adRevenue,
       contributionMargin: C,
       isAchievable: true,
@@ -680,12 +791,22 @@
     }
 
     if (totalRateDiscount >= 1 - EPSILON) {
-      return buildError('판매자 부담 할인율과 플랫폼 쿠폰 할인율의 합계가 100% 이상이므로 유효한 판매가를 역산할 수 없습니다.');
+      return buildError(
+        t(
+          '판매자 부담 할인율과 플랫폼 쿠폰 할인율의 합계가 100% 이상이므로 유효한 판매가를 역산할 수 없습니다.',
+          'Combined seller and platform discount rates are 100% or higher; cannot reverse-calculate a valid selling price.'
+        )
+      );
     }
 
     if (inp.targetMode === 'margin_rate') {
       if (!Number.isFinite(inp.targetMarginRate) || inp.targetMarginRate < 0 || inp.targetMarginRate >= 100) {
-        return buildError('목표 순마진율은 0% 이상 100% 미만 범위여야 유효한 판매가를 역산할 수 있습니다.');
+        return buildError(
+          t(
+            '목표 순마진율은 0% 이상 100% 미만 범위여야 유효한 판매가를 역산할 수 있습니다.',
+            'Target net margin rate must be between 0% and 100% (exclusive).'
+          )
+        );
       }
     }
 
@@ -722,27 +843,47 @@
     var pAlgebraic = null;
     if (inp.targetMode === 'profit_amount') {
       if (aProf <= EPSILON) {
-        return buildError('수수료율과 할인율 구조상 판매가를 높여도 순이익이 증가하지 않으므로(기울기 0 이하) 목표 순이익을 역산할 수 없습니다.');
+        return buildError(
+          t(
+            '수수료율과 할인율 구조상 판매가를 높여도 순이익이 증가하지 않으므로(기울기 0 이하) 목표 순이익을 역산할 수 없습니다.',
+            'Profit does not increase with higher price under the current fee/discount structure (slope <= 0).'
+          )
+        );
       }
       pAlgebraic = (inp.targetProfitAmount - bProf) / aProf;
     } else {
       var mu = inp.targetMarginRate / 100;
       var aEff = aProf - mu * aRev;
       if (aEff <= EPSILON) {
-        return buildError('수수료율과 목표 마진율(및 할인율)의 합이 100% 이상이므로 목표 마진율을 달성하는 판매가가 존재하지 않습니다.');
+        return buildError(
+          t(
+            '수수료율과 목표 마진율(및 할인율)의 합이 100% 이상이므로 목표 마진율을 달성하는 판매가가 존재하지 않습니다.',
+            'Fee rate + target margin rate (+ discount rate) is 100% or higher; no valid selling price exists.'
+          )
+        );
       }
       pAlgebraic = (mu * bRev - bProf) / aEff;
     }
 
     if (!Number.isFinite(pAlgebraic) || pAlgebraic <= 0) {
-      return buildError('현재 고정 비용·배송비 수익 조건에서는 양수 판매가로 목표값에 정확히 일치하는 유일한 해가 존재하지 않습니다.');
+      return buildError(
+        t(
+          '현재 고정 비용·배송비 수익 조건에서는 양수 판매가로 목표값에 정확히 일치하는 유일한 해가 존재하지 않습니다.',
+          'No unique positive selling price exists under the current fixed costs and shipping revenue settings.'
+        )
+      );
     }
 
     if (pAlgebraic < pMin - 1e-6) {
       return buildError(
-        '설정된 정액 쿠폰 할인 합계(' +
-          formatCurrency(totalFixedDiscount) +
-          ')보다 낮은 가격대에 해가 위치하여 고객 결제가 0원 미만 구간이 되므로 역산이 불가합니다.'
+        t(
+          '설정된 정액 쿠폰 할인 합계(' +
+            formatCurrency(totalFixedDiscount) +
+            ')보다 낮은 가격대에 해가 위치하여 고객 결제가 0원 미만 구간이 되므로 역산이 불가합니다.',
+          'Solution lies below total fixed discounts (' +
+            formatCurrency(totalFixedDiscount) +
+            '), making customer payment negative.'
+        )
       );
     }
 
@@ -794,7 +935,12 @@
     // 3. Round-Trip 자동 역검증
     var verifiedExact = evalAtPrice(pExact);
     if (verifiedExact.recognizedRevenue <= EPSILON) {
-      return buildError('역산된 가격에서의 회계 기준 매출이 0원 이하이므로 유효한 판매가로 확정할 수 없습니다.');
+      return buildError(
+        t(
+          '역산된 가격에서의 회계 기준 매출이 0원 이하이므로 유효한 판매가로 확정할 수 없습니다.',
+          'Recognized revenue at the calculated price is zero or negative.'
+        )
+      );
     }
 
     var roundedListPrice = Math.round(pExact);
@@ -807,30 +953,49 @@
     if (inp.targetMode === 'profit_amount') {
       verificationError = Math.abs(verifiedExact.operatingProfit - inp.targetProfitAmount);
       verificationPassed = verificationError < 1e-3;
-      verificationBadgeText =
+      verificationBadgeText = t(
         '[역검증 완료: 이 가격(' +
-        formatCurrency(roundedListPrice) +
-        ')으로 판매 시 목표 순이익 ' +
-        formatCurrency(verifiedRounded.operatingProfit) +
-        ' 달성 확인]';
+          formatCurrency(roundedListPrice) +
+          ')으로 판매 시 목표 순이익 ' +
+          formatCurrency(verifiedRounded.operatingProfit) +
+          ' 달성 확인]',
+        '[Round-Trip Verified: Selling at ' +
+          formatCurrency(roundedListPrice) +
+          ' achieves target profit of ' +
+          formatCurrency(verifiedRounded.operatingProfit) +
+          ']'
+      );
     } else {
       verificationError =
         verifiedExact.netMarginRate !== null
           ? Math.abs(verifiedExact.netMarginRate - inp.targetMarginRate)
           : Infinity;
       verificationPassed = verificationError < 1e-4;
-      verificationBadgeText =
+      verificationBadgeText = t(
         '[역검증 완료: 이 가격(' +
-        formatCurrency(roundedListPrice) +
-        ')으로 판매 시 순마진율 ' +
-        verifiedRounded.netMarginLabel +
-        ' (순이익 ' +
-        formatCurrency(verifiedRounded.operatingProfit) +
-        ') 달성 확인]';
+          formatCurrency(roundedListPrice) +
+          ')으로 판매 시 순마진율 ' +
+          verifiedRounded.netMarginLabel +
+          ' (순이익 ' +
+          formatCurrency(verifiedRounded.operatingProfit) +
+          ') 달성 확인]',
+        '[Round-Trip Verified: Selling at ' +
+          formatCurrency(roundedListPrice) +
+          ' achieves net margin ' +
+          verifiedRounded.netMarginLabel +
+          ' (Profit ' +
+          formatCurrency(verifiedRounded.operatingProfit) +
+          ')]'
+      );
     }
 
     if (!verificationPassed) {
-      return buildError('역산 결과에 대한 공통 회계 엔진 역검증 허용 오차를 초과하여 계산을 중단했습니다.');
+      return buildError(
+        t(
+          '역산 결과에 대한 공통 회계 엔진 역검증 허용 오차를 초과하여 계산을 중단했습니다.',
+          'Round-trip verification residual exceeded tolerance; calculation halted.'
+        )
+      );
     }
 
     // 4. 등록 정가 대비 추가 할인율(5%, 10%, 15%, 20%, 30%)별 수익 비교 시뮬레이션
@@ -851,10 +1016,10 @@
 
       var status =
         simResult.operatingProfit > 0.5
-          ? '흑자'
+          ? t('흑자', 'Profit')
           : simResult.operatingProfit < -0.5
-          ? '적자'
-          : '손익분기';
+          ? t('적자', 'Loss')
+          : t('손익분기', 'Break-Even');
 
       return {
         extraDiscountPct: extraPct,
@@ -889,11 +1054,13 @@
    */
   function formatCurrency(val) {
     if (val === null || typeof val === 'undefined' || !Number.isFinite(val)) {
-      return '산출 불가';
+      return t('산출 불가', 'N/A');
     }
     var rounded = Math.round(val);
     if (Object.is(rounded, -0)) rounded = 0;
-    return rounded.toLocaleString('ko-KR') + '원';
+    return currentLang === 'en'
+      ? rounded.toLocaleString('en-US') + ' KRW'
+      : rounded.toLocaleString('ko-KR') + '원';
   }
 
   function formatNumber(val, decimals) {
@@ -904,7 +1071,7 @@
     var factor = Math.pow(10, d);
     var rounded = Math.round(val * factor) / factor;
     if (Object.is(rounded, -0)) rounded = 0;
-    return rounded.toLocaleString('ko-KR', {
+    return rounded.toLocaleString(currentLang === 'en' ? 'en-US' : 'ko-KR', {
       minimumFractionDigits: d,
       maximumFractionDigits: d
     });
@@ -912,7 +1079,7 @@
 
   function formatPercent(val) {
     if (val === null || typeof val === 'undefined' || !Number.isFinite(val)) {
-      return '산출 불가';
+      return t('산출 불가', 'N/A');
     }
     return formatNumber(val, 2) + '%';
   }
@@ -1129,7 +1296,10 @@
     var basisBadge = createEl(
       'div',
       'basis-banner',
-      '적용 회계 기준: ' + result.accountingBasisLabel + ' | 과세 유형: ' + result.taxEstimate.taxpayerLabel
+      t('적용 회계 기준: ', 'Accounting Basis: ') +
+        result.accountingBasisLabel +
+        t(' | 과세 유형: ', ' | Taxpayer Type: ') +
+        result.taxEstimate.taxpayerLabel
     );
     container.appendChild(basisBadge);
 
@@ -1137,43 +1307,47 @@
       var warnBox = createEl(
         'div',
         'alert-box alert-warning',
-        '주의: 판매자 부담 할인과 플랫폼 쿠폰 합계가 등록 정가를 초과하여 고객 실결제가는 0원(하한)으로 처리되었습니다.'
+        t(
+          '주의: 판매자 부담 할인과 플랫폼 쿠폰 합계가 등록 정가를 초과하여 고객 실결제가는 0원(하한)으로 처리되었습니다.',
+          'Warning: Combined discounts exceed list price; customer payment is floored at 0 KRW.'
+        )
       );
       container.appendChild(warnBox);
     }
 
     var grid = createEl('div', 'waterfall-grid');
+    var zeroCur = formatCurrency(0);
 
     // [1단계: 플랫폼 정산 내역]
     var stage1 = createEl('section', 'waterfall-card');
     var s1Header = createEl('div', 'waterfall-header');
-    s1Header.appendChild(createEl('span', 'stage-pill stage-1', '1단계'));
-    s1Header.appendChild(createEl('h3', 'waterfall-title', '플랫폼 정산 내역 (통장 입금 예정 기준)'));
+    s1Header.appendChild(createEl('span', 'stage-pill stage-1', t('1단계', 'Stage 1')));
+    s1Header.appendChild(createEl('h3', 'waterfall-title', t('플랫폼 정산 내역 (통장 입금 예정 기준)', 'Platform Settlement Breakdown (Bank Payout Basis)')));
     stage1.appendChild(s1Header);
 
     var s1List = createEl('ul', 'waterfall-list');
     var s1Rows = [
-      { label: '등록 정가 (P_list)', value: formatCurrency(result.listPrice), type: 'base' },
-      { label: '(-) 판매자 부담 할인액 (D_seller)', value: result.sellerDiscount > 0 ? '-' + formatCurrency(result.sellerDiscount) : '0원', type: 'minus' },
+      { label: t('등록 정가 (P_list)', 'List Price (P_list)'), value: formatCurrency(result.listPrice), type: 'base' },
+      { label: t('(-) 판매자 부담 할인액 (D_seller)', '(-) Seller-Funded Discount (D_seller)'), value: result.sellerDiscount > 0 ? '-' + formatCurrency(result.sellerDiscount) : zeroCur, type: 'minus' },
       {
         label: inp.platformSubsidyReimbursed
-          ? '(-) 플랫폼 쿠폰 할인액 (고객 차감·정산 시 보전됨)'
-          : '(-) 플랫폼 쿠폰 할인액 (미보전·셀러 매출 차감)',
-        value: result.platformDiscount > 0 ? '-' + formatCurrency(result.platformDiscount) : '0원',
+          ? t('(-) 플랫폼 쿠폰 할인액 (고객 차감·정산 시 보전됨)', '(-) Platform Coupon (Deducted from Buyer, Reimbursed)')
+          : t('(-) 플랫폼 쿠폰 할인액 (미보전·셀러 매출 차감)', '(-) Platform Coupon (Non-Reimbursed, Reduces Revenue)'),
+        value: result.platformDiscount > 0 ? '-' + formatCurrency(result.platformDiscount) : zeroCur,
         type: 'minus'
       },
-      { label: '(=) 고객 실제 결제 상품가 (P_pay)', value: formatCurrency(result.customerPayment), type: 'subtotal' },
+      { label: t('(=) 고객 실제 결제 상품가 (P_pay)', '(=) Customer Actual Product Payment (P_pay)'), value: formatCurrency(result.customerPayment), type: 'subtotal' },
       {
         label: inp.platformSubsidyReimbursed
-          ? '(+) 플랫폼 쿠폰 정산 보전금'
-          : '(+) 플랫폼 쿠폰 정산 보전금 (해당 없음)',
-        value: result.platformSubsidyRecognized > 0 ? '+' + formatCurrency(result.platformSubsidyRecognized) : '0원',
+          ? t('(+) 플랫폼 쿠폰 정산 보전금', '(+) Platform Coupon Reimbursement')
+          : t('(+) 플랫폼 쿠폰 정산 보전금 (해당 없음)', '(+) Platform Coupon Reimbursement (None)'),
+        value: result.platformSubsidyRecognized > 0 ? '+' + formatCurrency(result.platformSubsidyRecognized) : zeroCur,
         type: 'plus'
       },
-      { label: '(=) 판매자 귀속 상품 매출 (R_seller)', value: formatCurrency(result.sellerProductRevenue), type: 'subtotal' },
-      { label: '(+) 고객 결제 배송비 (S_cust)', value: result.customerShipping > 0 ? '+' + formatCurrency(result.customerShipping) : '0원', type: 'plus' },
-      { label: '(-) 마켓 수수료 합계 (' + result.feeBasisLabel + ')', value: result.feeVat.cash > 0 ? '-' + formatCurrency(result.feeVat.cash) : '0원', type: 'minus' },
-      { label: '(=) 플랫폼 정산 예정액 (원가·택배원가·광고 차감 전)', value: formatCurrency(result.platformSettlement), type: 'total' }
+      { label: t('(=) 판매자 귀속 상품 매출 (R_seller)', '(=) Seller Attributed Revenue (R_seller)'), value: formatCurrency(result.sellerProductRevenue), type: 'subtotal' },
+      { label: t('(+) 고객 결제 배송비 (S_cust)', '(+) Customer Shipping Paid (S_cust)'), value: result.customerShipping > 0 ? '+' + formatCurrency(result.customerShipping) : zeroCur, type: 'plus' },
+      { label: t('(-) 마켓 수수료 합계 (', '(-) Marketplace Fee Total (') + result.feeBasisLabel + ')', value: result.feeVat.cash > 0 ? '-' + formatCurrency(result.feeVat.cash) : zeroCur, type: 'minus' },
+      { label: t('(=) 플랫폼 정산 예정액 (원가·택배원가·광고 차감 전)', '(=) Estimated Platform Settlement (Before COGS/Shipping/Ads)'), value: formatCurrency(result.platformSettlement), type: 'total' }
     ];
 
     s1Rows.forEach(function (row) {
@@ -1188,20 +1362,32 @@
     // [2단계: 셀러 손익 계산 내역]
     var stage2 = createEl('section', 'waterfall-card');
     var s2Header = createEl('div', 'waterfall-header');
-    s2Header.appendChild(createEl('span', 'stage-pill stage-2', '2단계'));
-    s2Header.appendChild(createEl('h3', 'waterfall-title', '셀러 손익 계산 내역 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 손익 기준' : 'VAT 포함 현금 기준') + ')'));
+    s2Header.appendChild(createEl('span', 'stage-pill stage-2', t('2단계', 'Stage 2')));
+    s2Header.appendChild(
+      createEl(
+        'h3',
+        'waterfall-title',
+        t(
+          '셀러 손익 계산 내역 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 손익 기준' : 'VAT 포함 현금 기준') + ')',
+          'Seller P&L Breakdown (' + (inp.accountingBasis === 'supply_basis' ? 'Supply-Value Basis' : 'VAT-Inclusive Cash Basis') + ')'
+        )
+      )
+    );
     stage2.appendChild(s2Header);
 
     var s2List = createEl('ul', 'waterfall-list');
     var s2Rows = [
-      { label: '기준 순매출 (배송비 수익 포함)', value: formatCurrency(result.recognizedRevenue), type: 'base' },
-      { label: '(-) 기준 마켓 수수료', value: result.recognizedFee > 0 ? '-' + formatCurrency(result.recognizedFee) : '0원', type: 'minus' },
-      { label: '(-) 기준 상품 매입 원가 (COGS)', value: result.recognizedCogs > 0 ? '-' + formatCurrency(result.recognizedCogs) : '0원', type: 'minus' },
-      { label: '(-) 기준 판매자 실부담 배송 원가', value: result.recognizedShipping > 0 ? '-' + formatCurrency(result.recognizedShipping) : '0원', type: 'minus' },
-      { label: '(=) 광고비 차감 전 공헌이익 (C)', value: formatCurrency(result.contributionMargin), type: 'subtotal-accent' },
-      { label: '(-) 기준 건당 광고비 (AdSpend)', value: result.recognizedAdSpend > 0 ? '-' + formatCurrency(result.recognizedAdSpend) : '0원', type: 'minus' },
+      { label: t('기준 순매출 (배송비 수익 포함)', 'Recognized Net Revenue (Incl. Shipping Income)'), value: formatCurrency(result.recognizedRevenue), type: 'base' },
+      { label: t('(-) 기준 마켓 수수료', '(-) Recognized Marketplace Fee'), value: result.recognizedFee > 0 ? '-' + formatCurrency(result.recognizedFee) : zeroCur, type: 'minus' },
+      { label: t('(-) 기준 상품 매입 원가 (COGS)', '(-) Recognized Product Cost (COGS)'), value: result.recognizedCogs > 0 ? '-' + formatCurrency(result.recognizedCogs) : zeroCur, type: 'minus' },
+      { label: t('(-) 기준 판매자 실부담 배송 원가', '(-) Recognized Seller Shipping Cost'), value: result.recognizedShipping > 0 ? '-' + formatCurrency(result.recognizedShipping) : zeroCur, type: 'minus' },
+      { label: t('(=) 광고비 차감 전 공헌이익 (C)', '(=) Pre-Ad Contribution Margin (C)'), value: formatCurrency(result.contributionMargin), type: 'subtotal-accent' },
+      { label: t('(-) 기준 건당 광고비 (AdSpend)', '(-) Recognized Ad Spend per Order'), value: result.recognizedAdSpend > 0 ? '-' + formatCurrency(result.recognizedAdSpend) : zeroCur, type: 'minus' },
       {
-        label: '(=) 세금 미반영 영업 추정 이익 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 기준' : 'VAT 포함 현금 기준') + ')',
+        label: t(
+          '(=) 세금 미반영 영업 추정 이익 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 기준' : 'VAT 포함 현금 기준') + ')',
+          '(=) Pre-Tax Est. Operating Profit (' + (inp.accountingBasis === 'supply_basis' ? 'Supply Basis' : 'Cash Basis') + ')'
+        ),
         value: formatCurrency(result.operatingProfit),
         type: result.operatingProfit >= 0 ? 'total-profit' : 'total-loss'
       }
@@ -1221,12 +1407,12 @@
     // [참고 영역: 예상 부가세 정산 추정]
     var taxBox = createEl('section', 'tax-reference-card');
     var taxHead = createEl('div', 'tax-ref-header');
-    taxHead.appendChild(createEl('span', 'stage-pill stage-tax', '세무 참고'));
-    taxHead.appendChild(createEl('h3', 'waterfall-title', '예상 부가세 정산 추정 (현금 정산·손익과 분리 표시)'));
+    taxHead.appendChild(createEl('span', 'stage-pill stage-tax', t('세무 참고', 'Tax Ref.')));
+    taxHead.appendChild(createEl('h3', 'waterfall-title', t('예상 부가세 정산 추정 (현금 정산·손익과 분리 표시)', 'Estimated VAT Reference (Separated from Payout & P&L)')));
     taxBox.appendChild(taxHead);
 
     var taxSummary = createEl('div', 'tax-summary-row');
-    taxSummary.appendChild(createEl('span', 'tax-type-badge', '적용 과세 유형: ' + result.taxEstimate.taxpayerLabel));
+    taxSummary.appendChild(createEl('span', 'tax-type-badge', t('적용 과세 유형: ', 'Taxpayer Type: ') + result.taxEstimate.taxpayerLabel));
     taxSummary.appendChild(createEl('strong', 'tax-amount-value', result.taxEstimate.displayAmount));
     taxBox.appendChild(taxSummary);
 
@@ -1234,9 +1420,9 @@
       var taxMathLine = createEl(
         'p',
         'tax-math-line',
-        '예상 매출세액 ' +
+        t('예상 매출세액 ', 'Est. Output VAT ') +
           formatCurrency(result.taxEstimate.outputVat) +
-          ' - 적격증빙 공제 매입세액 ' +
+          t(' - 적격증빙 공제 매입세액 ', ' - Qualified Input VAT Credit ') +
           formatCurrency(result.taxEstimate.deductibleInputVat) +
           ' = ' +
           formatCurrency(result.taxEstimate.estimatedVatPayable)
@@ -1254,24 +1440,42 @@
 
     // [적용된 산식 및 회계 전제조건 보기] 아코디언
     var details = createEl('details', 'formula-details');
-    var summary = createEl('summary', '', '적용된 산식 및 회계 전제조건 보기');
+    var summary = createEl('summary', '', t('적용된 산식 및 회계 전제조건 보기', 'View Applied Formulas & Accounting Assumptions'));
     details.appendChild(summary);
     var detailBody = createEl('div', 'formula-body');
 
     var formulaLines = [
-      '1) 고객 실결제가(P_pay) = max(0, 등록 정가 - 판매자 부담 할인 - 플랫폼 쿠폰 할인) = ' + formatCurrency(result.customerPayment),
-      '2) 판매자 귀속 매출(R_seller) = ' +
-        (inp.platformSubsidyReimbursed ? 'max(0, 등록 정가 - 판매자 부담 할인)' : '고객 실결제가') +
-        ' = ' +
-        formatCurrency(result.sellerProductRevenue),
-      '3) 마켓 수수료 산정 기준: ' + result.feeBasisLabel + ' (기준 금액 ' + formatCurrency(result.feeBasisAmount) + ', 수수료율 ' + inp.feeRate + '%, 배송비 수수료율 ' + inp.shippingFeeRate + '%)',
-      '4) 플랫폼 정산 예정액 = 현금 매출(' + formatCurrency(result.revVat.cash) + ') - 현금 마켓 수수료(' + formatCurrency(result.feeVat.cash) + ') = ' + formatCurrency(result.platformSettlement),
-      '5) 광고 전 공헌이익(C) = 기준 순매출 - 기준 원가 - 기준 수수료 - 기준 배송원가 = ' + formatCurrency(result.contributionMargin),
-      '6) VAT 전제: ' +
-        (inp.accountingBasis === 'supply_basis'
-          ? '공급가액 손익 기준 적용 (적격증빙 공제 가능 비용만 부가세 10% 차감 후 영업비용 반영, 불공제 비용은 부가세 포함 전액 비용 처리)'
-          : 'VAT 포함 현금 기준 적용 (통장 실제 현금 유출입 기준, 공제 가능한 매입세액을 별도로 차감하지 않음)'),
-      '7) 정밀도 원칙: 모든 중간 계산은 JavaScript IEEE 754 부동소수점 정밀도로 계산되며, 화면 표기 단계에서만 원 단위(또는 소수점 둘째 자리 %)로 반올림됩니다.'
+      t('1) 고객 실결제가(P_pay) = max(0, 등록 정가 - 판매자 부담 할인 - 플랫폼 쿠폰 할인) = ', '1) Customer Payment (P_pay) = max(0, List Price - Seller Discount - Platform Coupon) = ') + formatCurrency(result.customerPayment),
+      t(
+        '2) 판매자 귀속 매출(R_seller) = ' + (inp.platformSubsidyReimbursed ? 'max(0, 등록 정가 - 판매자 부담 할인)' : '고객 실결제가') + ' = ',
+        '2) Seller Attributed Revenue (R_seller) = ' + (inp.platformSubsidyReimbursed ? 'max(0, List Price - Seller Discount)' : 'P_pay') + ' = '
+      ) + formatCurrency(result.sellerProductRevenue),
+      t(
+        '3) 마켓 수수료 산정 기준: ' + result.feeBasisLabel + ' (기준 금액 ' + formatCurrency(result.feeBasisAmount) + ', 수수료율 ' + inp.feeRate + '%, 배송비 수수료율 ' + inp.shippingFeeRate + '%)',
+        '3) Fee Basis: ' + result.feeBasisLabel + ' (Basis ' + formatCurrency(result.feeBasisAmount) + ', Fee Rate ' + inp.feeRate + '%, Shipping Fee Rate ' + inp.shippingFeeRate + '%)'
+      ),
+      t(
+        '4) 플랫폼 정산 예정액 = 현금 매출(' + formatCurrency(result.revVat.cash) + ') - 현금 마켓 수수료(' + formatCurrency(result.feeVat.cash) + ') = ' + formatCurrency(result.platformSettlement),
+        '4) Platform Settlement = Cash Revenue (' + formatCurrency(result.revVat.cash) + ') - Cash Fee (' + formatCurrency(result.feeVat.cash) + ') = ' + formatCurrency(result.platformSettlement)
+      ),
+      t(
+        '5) 광고 전 공헌이익(C) = 기준 순매출 - 기준 원가 - 기준 수수료 - 기준 배송원가 = ' + formatCurrency(result.contributionMargin),
+        '5) Pre-Ad Contribution Margin (C) = Net Revenue - COGS - Fee - Shipping Cost = ' + formatCurrency(result.contributionMargin)
+      ),
+      t(
+        '6) VAT 전제: ' +
+          (inp.accountingBasis === 'supply_basis'
+            ? '공급가액 손익 기준 적용 (적격증빙 공제 가능 비용만 부가세 10% 차감 후 영업비용 반영, 불공제 비용은 부가세 포함 전액 비용 처리)'
+            : 'VAT 포함 현금 기준 적용 (통장 실제 현금 유출입 기준, 공제 가능한 매입세액을 별도로 차감하지 않음)'),
+        '6) VAT Premise: ' +
+          (inp.accountingBasis === 'supply_basis'
+            ? 'Supply-Value P&L Basis (deductible input VAT excluded from expense; non-deductible items expensed in full).'
+            : 'VAT-Inclusive Cash Basis (reflects actual cash outflow/inflow without deducting creditable input VAT).')
+      ),
+      t(
+        '7) 정밀도 원칙: 모든 중간 계산은 JavaScript IEEE 754 부동소수점 정밀도로 계산되며, 화면 표기 단계에서만 원 단위(또는 소수점 둘째 자리 %)로 반올림됩니다.',
+        '7) Precision Policy: Full IEEE 754 floating-point precision is preserved internally and rounded only for final display.'
+      )
     ];
     formulaLines.forEach(function (line) {
       detailBody.appendChild(createEl('p', '', line));
@@ -1288,10 +1492,16 @@
     clearEl(container);
 
     var headerRow = createEl('div', 'scenario-toolbar');
-    headerRow.appendChild(createEl('h3', 'section-subtitle', '저장된 상품 시나리오 비교 (' + scenarios.length + '건)'));
+    headerRow.appendChild(
+      createEl(
+        'h3',
+        'section-subtitle',
+        t('저장된 상품 시나리오 비교 (' + scenarios.length + '건)', 'Saved Product Scenarios (' + scenarios.length + ')')
+      )
+    );
 
     var btnGroup = createEl('div', 'btn-row');
-    var exportBtn = createEl('button', 'btn btn-secondary', 'CSV로 내보내기 (Excel 호환)');
+    var exportBtn = createEl('button', 'btn btn-secondary', t('CSV로 내보내기 (Excel 호환)', 'Export CSV (Excel Compatible)'));
     exportBtn.type = 'button';
     exportBtn.disabled = scenarios.length === 0;
     exportBtn.addEventListener('click', function () {
@@ -1299,7 +1509,7 @@
     });
     btnGroup.appendChild(exportBtn);
 
-    var clearBtn = createEl('button', 'btn btn-ghost', '전체 삭제');
+    var clearBtn = createEl('button', 'btn btn-ghost', t('전체 삭제', 'Clear All'));
     clearBtn.type = 'button';
     clearBtn.disabled = scenarios.length === 0;
     clearBtn.addEventListener('click', function () {
@@ -1312,13 +1522,23 @@
     var secNote = createEl(
       'p',
       'helper-note',
-      '내보내는 CSV 파일에는 UTF-8 BOM이 포함되며, 사용자 입력 문자열(상품명 등)에 대해 알려진 CSV Injection 위험을 줄이는 방어 처리(선행 수식 문자 검사 및 RFC 4180 이스케이프)가 적용됩니다.'
+      t(
+        '내보내는 CSV 파일에는 UTF-8 BOM이 포함되며, 사용자 입력 문자열(상품명 등)에 대해 알려진 CSV Injection 위험을 줄이는 방어 처리(선행 수식 문자 검사 및 RFC 4180 이스케이프)가 적용됩니다.',
+        'Exported CSV files include UTF-8 BOM and apply defensive escaping (formula-prefix quoting & RFC 4180 escaping) to reduce known CSV Injection risks.'
+      )
     );
     container.appendChild(secNote);
 
     if (scenarios.length === 0) {
       container.appendChild(
-        createEl('p', 'empty-state', '아직 저장된 시나리오가 없습니다. 위 계산기에서 [시나리오 비교함에 저장] 버튼을 누르면 여러 상품의 마진을 나란히 비교할 수 있습니다.')
+        createEl(
+          'p',
+          'empty-state',
+          t(
+            '아직 저장된 시나리오가 없습니다. 위 계산기에서 [시나리오 비교함에 저장] 버튼을 누르면 여러 상품의 마진을 나란히 비교할 수 있습니다.',
+            'No saved scenarios yet. Click "Save to Scenario Table" above to compare margins side by side.'
+          )
+        )
       );
       return;
     }
@@ -1327,7 +1547,10 @@
     var table = createEl('table', 'data-table');
     var thead = createEl('thead');
     var headTr = createEl('tr');
-    var headers = ['상품명/메모', '등록정가', '실결제가', '정산예정액', '공헌이익(C)', '영업추정이익', '순마진율', 'ROI', '회계기준', '관리'];
+    var headers =
+      currentLang === 'en'
+        ? ['Item / Memo', 'List Price', 'Buyer Paid', 'Settlement', 'Contrib. (C)', 'Est. Profit', 'Net Margin', 'ROI', 'Basis', 'Action']
+        : ['상품명/메모', '등록정가', '실결제가', '정산예정액', '공헌이익(C)', '영업추정이익', '순마진율', 'ROI', '회계기준', '관리'];
     headers.forEach(function (h) {
       headTr.appendChild(createEl('th', '', h));
     });
@@ -1344,12 +1567,12 @@
       tr.appendChild(createEl('td', 'num', formatCurrency(sc.contributionMargin)));
       var profTd = createEl('td', sc.operatingProfit >= 0 ? 'num text-positive' : 'num text-negative', formatCurrency(sc.operatingProfit));
       tr.appendChild(profTd);
-      tr.appendChild(createEl('td', 'num', sc.netMarginLabel || formatPercent(sc.netMarginRate)));
-      tr.appendChild(createEl('td', 'num', sc.roiLabel || formatPercent(sc.roi)));
+      tr.appendChild(createEl('td', 'num', sc.netMarginRate !== null && typeof sc.netMarginRate === 'number' ? formatPercent(sc.netMarginRate) : t('산출 불가 (매출 0원)', 'N/A (Zero Revenue)')));
+      tr.appendChild(createEl('td', 'num', sc.roi !== null && typeof sc.roi === 'number' ? formatPercent(sc.roi) : t('산출 불가 (원가 0원)', 'N/A (Zero COGS)')));
       tr.appendChild(createEl('td', 'td-basis', sc.accountingBasisLabel));
 
       var actionTd = createEl('td');
-      var delBtn = createEl('button', 'btn-mini-delete', '삭제');
+      var delBtn = createEl('button', 'btn-mini-delete', t('삭제', 'Delete'));
       delBtn.type = 'button';
       delBtn.addEventListener('click', function () {
         if (typeof onDelete === 'function') onDelete(sc.id);
@@ -1364,26 +1587,45 @@
   }
 
   function exportScenariosToCsv(scenarios, filenamePrefix) {
-    var rows = [
-      [
-        '저장일',
-        '상품명',
-        '등록정가(원)',
-        '판매자부담할인(원)',
-        '플랫폼쿠폰할인(원)',
-        '고객실결제가(원)',
-        '플랫폼정산예정액(원)',
-        '기준순매출(원)',
-        '기준원가(원)',
-        '기준배송원가(원)',
-        '기준광고비(원)',
-        '광고전공헌이익(원)',
-        '영업추정이익(원)',
-        '순마진율(%)',
-        'ROI(%)',
-        '회계기준'
-      ]
-    ];
+    var headers =
+      currentLang === 'en'
+        ? [
+            'Saved Date',
+            'Item Name',
+            'List Price (KRW)',
+            'Seller Discount (KRW)',
+            'Platform Coupon (KRW)',
+            'Customer Paid (KRW)',
+            'Platform Settlement (KRW)',
+            'Net Revenue (KRW)',
+            'COGS (KRW)',
+            'Shipping Cost (KRW)',
+            'Ad Spend (KRW)',
+            'Contribution Margin (KRW)',
+            'Est. Operating Profit (KRW)',
+            'Net Margin (%)',
+            'ROI (%)',
+            'Accounting Basis'
+          ]
+        : [
+            '저장일',
+            '상품명',
+            '등록정가(원)',
+            '판매자부담할인(원)',
+            '플랫폼쿠폰할인(원)',
+            '고객실결제가(원)',
+            '플랫폼정산예정액(원)',
+            '기준순매출(원)',
+            '기준원가(원)',
+            '기준배송원가(원)',
+            '기준광고비(원)',
+            '광고전공헌이익(원)',
+            '영업추정이익(원)',
+            '순마진율(%)',
+            'ROI(%)',
+            '회계기준'
+          ];
+    var rows = [headers];
 
     scenarios.forEach(function (sc) {
       rows.push([
@@ -1410,11 +1652,227 @@
     return downloadCsv(fname, rows);
   }
 
+  /**
+   * 공용 다국어(KO/EN) 번역 사전 및 XSS-안전 DOM 번역 엔진
+   */
+  var COMMON_I18N_MAP = {
+    '쇼핑몰 셀러 정산·마진·ROAS 통합 회계 엔진': 'Unified E-Commerce Seller Settlement, Margin & ROAS Engine',
+    '종합 대시보드': 'Dashboard',
+    '순이익·정산 계산기': 'Profit & Settlement',
+    '손익분기 ROAS': 'Break-Even ROAS',
+    '판매가 역산기': 'Price Calculator',
+    '약관·개인정보·면책': 'Legal & Privacy',
+    '순이익 계산기': 'Profit Calculator',
+    'ROAS 계산기': 'ROAS Calculator',
+    '개인정보처리방침·이용약관·면책고지': 'Privacy, Terms & Disclaimer',
+    '광고 영역 (승인 후 애드센스 / 애드핏 배너 코드 삽입 위치 · CLS 방지 높이 확보)': 'Ad Slot (Reserved min-height to prevent CLS for AdSense / AdFit)',
+    '광고 영역 (승인 후 애드센스 반응형 / 애드핏 코드 삽입 위치 · CLS 방지)': 'In-Content Ad Slot (Reserved min-height to prevent CLS)',
+    '기본값(30,000원)': 'Reset (30,000 KRW)',
+    '기본값(목표 8,000원)': 'Reset (8,000 KRW Target)',
+    '1. 상품 가격 및 쿠폰 부담': '1. Price & Coupon Funding',
+    '상품명 / 메모 (시나리오 저장용)': 'Item Name / Memo (for Scenarios)',
+    '상품명 / 메모': 'Item Name / Memo',
+    '상품명 / 캠페인명': 'Item / Campaign Name',
+    '등록 정가 (원)': 'List Price (KRW)',
+    '판매자 부담 할인액 (원)': 'Seller-Funded Discount (KRW)',
+    '플랫폼 부담 쿠폰 (원)': 'Platform-Funded Coupon (KRW)',
+    '플랫폼 쿠폰 지원금을 정산 시 판매자에게 보전함': 'Platform reimburses its coupon amount upon settlement',
+    '2. 매입 원가 · 배송비 · 마켓 수수료': '2. COGS, Shipping & Marketplace Fees',
+    '2. 원가 · 배송비 · 마켓 수수료': '2. COGS, Shipping & Marketplace Fees',
+    '3. 매입 원가 · 수수료 · 배송비 · 광고비': '3. COGS, Fees, Shipping & Ad Spend',
+    '상품 매입 원가 COGS (원)': 'Product Cost / COGS (KRW)',
+    '수수료 부과 기준': 'Marketplace Fee Basis',
+    '① 판매자 귀속 상품 매출 비례': '1. Seller Attributed Revenue',
+    '② 고객 실결제가 비례': '2. Customer Paid Amount',
+    '③ 배송비 포함 결제금액 비례': '3. Payment Incl. Shipping',
+    '④ 직접 입력 수수료 기준': '4. Custom Fee Basis',
+    '마켓 판매 수수료율 (%)': 'Marketplace Fee Rate (%)',
+    '배송비 별도 수수료율 (%)': 'Shipping Fee Rate (%)',
+    '직접 입력 방식': 'Custom Fee Input Mode',
+    '고정 수수료 금액 (원)': 'Fixed Fee Amount (KRW)',
+    '직접 기준금액 × 수수료율(%)': 'Custom Basis Amount × Fee Rate (%)',
+    '직접 수수료 금액 / 기준금액 (원)': 'Custom Fee / Basis Amount (KRW)',
+    '직접 입력 수수료 기준금액 (원)': 'Custom Fee Basis Amount (KRW)',
+    '고객 결제 배송비 (원)': 'Customer Shipping Paid (KRW)',
+    '판매자 실부담 택배 원가 (원)': 'Actual Seller Courier Cost (KRW)',
+    '건당 광고비 (원)': 'Ad Spend per Order (KRW)',
+    '예상 건당 광고비 (원)': 'Est. Ad Spend per Order (KRW)',
+    '일일 예상 판매량 (건)': 'Est. Daily Orders',
+    '월 영업일수 (일)': 'Operating Days / Month',
+    '고급 설정 (VAT 포함/공급가액 손익 기준 · 매입세액 공제 · 과세유형)': 'Advanced Settings (VAT Cash vs Supply Basis, Input Tax Credits & Taxpayer Type)',
+    '손익 계산 회계 기준': 'P&L Accounting Basis',
+    'VAT 포함 현금 기준 (실제 통장 입출금)': 'VAT-Inclusive Cash Basis (Actual Cash Flow)',
+    '공급가액 손익 기준 (공제 가능 부가세 제외)': 'Supply-Value P&L Basis (Deductible Input VAT Excluded)',
+    '공급가액 손익 기준 선택 시 적격증빙 공제 가능 항목의 부가세 10%는 영업비용에서 중복 차감하지 않습니다.': 'In Supply-Value Basis, creditable 10% input VAT is excluded from operating expenses.',
+    '사업자 과세 유형 (참고용 부가세 추정)': 'Taxpayer Type (For VAT Reference Estimate)',
+    '사업자 과세 유형': 'Taxpayer Type',
+    '일반과세자': 'General Taxpayer (10% VAT)',
+    '간이과세자': 'Simplified Taxpayer',
+    '면세사업자': 'VAT-Exempt Business',
+    '간이과세 업종별 부가가치율 (%)': 'Simplified Taxpayer Value-Added Rate (%)',
+    '미선택 (필수 입력 전 계산 보류)': 'Not Selected (Calculation Pending)',
+    '소매업·전기/가스/증기 (15%)': 'Retail / Utilities (15%)',
+    '제조업·농임어업·소화물운송 (20%)': 'Manufacturing / Parcel Delivery (20%)',
+    '건설업·부동산임대 (25%)': 'Construction / Real Estate Rental (25%)',
+    '음식점업·숙박업·운수창고통신 (30%)': 'F&B / Lodging / Logistics & Telecom (30%)',
+    '기타 서비스업 (40%)': 'Other Services (40%)',
+    '세금계산서 매입 공제율 (%)': 'Tax Invoice Credit Rate (%)',
+    '항목': 'Item',
+    'VAT(10%) 포함 입력': 'Entered Incl. 10% VAT',
+    '적격증빙 매입세액 공제': 'Qualified VAT Credit',
+    '매출(판매가·배송비)': 'Revenue (Price & Shipping)',
+    '매출세액 기준': 'Output VAT Basis',
+    '상품 원가 (COGS)': 'Product Cost (COGS)',
+    '마켓 수수료': 'Marketplace Fee',
+    '판매자 택배 원가': 'Seller Courier Cost',
+    '건당 광고비': 'Ad Spend per Order',
+    '시나리오 비교함에 저장': 'Save to Scenario Table',
+    '계산 요약 복사': 'Copy Summary',
+    '인쇄 / PDF 저장': 'Print / Save PDF',
+    '자주 묻는 질문 (FAQ)': 'Frequently Asked Questions (FAQ)',
+    'SELLER MATH — 쇼핑몰 셀러 정산·마진·ROAS·판매가 역산 무료 웹 도구': 'SELLER MATH — Free Seller Profit, Settlement, ROAS & Pricing Tool'
+  };
+
+  var COMMON_PLACEHOLDER_MAP = {
+    '예: 여름 린넨 셔츠': 'e.g., Summer Linen Shirt',
+    '예: 여름 린넨 셔츠 메타캠페인': 'e.g., Linen Shirt Meta Ad Campaign',
+    '예: 2026 신상 니트 가디건': 'e.g., 2026 Knit Cardigan'
+  };
+
+  var leafSnapshotMap = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+  var richSnapshotMap = typeof WeakMap !== 'undefined' ? new WeakMap() : null;
+  var activePageDict = {};
+  var activePageTitles = { ko: '', en: '' };
+  var langButtonRef = null;
+
+  function applyDomTranslations() {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = currentLang;
+
+    if (!activePageTitles.ko && document.title) {
+      activePageTitles.ko = document.title;
+    }
+    if (currentLang === 'en' && activePageTitles.en) {
+      document.title = activePageTitles.en;
+    } else if (currentLang === 'ko' && activePageTitles.ko) {
+      document.title = activePageTitles.ko;
+    }
+
+    if (langButtonRef) {
+      langButtonRef.textContent = currentLang === 'en' ? '🌐 한국어' : '🌐 EN';
+      langButtonRef.setAttribute(
+        'aria-label',
+        currentLang === 'en' ? '한국어로 전환' : 'Switch to English'
+      );
+    }
+
+    // 1. Rich / explicit data-i18n-en elements (snapshot original Korean children safely)
+    var richNodes = document.querySelectorAll('[data-i18n-en]');
+    for (var i = 0; i < richNodes.length; i++) {
+      var rNode = richNodes[i];
+      if (richSnapshotMap && !richSnapshotMap.has(rNode)) {
+        richSnapshotMap.set(rNode, rNode.cloneNode(true));
+      }
+      if (currentLang === 'en') {
+        rNode.textContent = rNode.getAttribute('data-i18n-en');
+      } else if (richSnapshotMap && richSnapshotMap.has(rNode)) {
+        var origClone = richSnapshotMap.get(rNode).cloneNode(true);
+        clearEl(rNode);
+        while (origClone.firstChild) {
+          rNode.appendChild(origClone.firstChild);
+        }
+      }
+    }
+
+    // 2. Leaf text elements via dictionary
+    var candidates = document.querySelectorAll('h1, h2, h3, p, a, span, strong, label, button, summary, th, td, li, option');
+    for (var j = 0; j < candidates.length; j++) {
+      var el = candidates[j];
+      if (el.hasAttribute('data-i18n-en') || el.classList.contains('lang-switch-btn')) continue;
+      if (el.children.length > 0) continue;
+
+      if (leafSnapshotMap && !leafSnapshotMap.has(el)) {
+        leafSnapshotMap.set(el, el.textContent);
+      }
+      var origText = leafSnapshotMap ? leafSnapshotMap.get(el) : el.textContent;
+      var norm = origText.replace(/\s+/g, ' ').trim();
+      if (!norm) continue;
+
+      if (currentLang === 'en') {
+        var translated = activePageDict[norm] || COMMON_I18N_MAP[norm];
+        if (translated) {
+          el.textContent = translated;
+        }
+      } else {
+        el.textContent = origText;
+      }
+    }
+
+    // 3. Input placeholders
+    var inputs = document.querySelectorAll('input[placeholder]');
+    for (var k = 0; k < inputs.length; k++) {
+      var inpEl = inputs[k];
+      if (!inpEl.dataset.koPlaceholder) {
+        inpEl.dataset.koPlaceholder = inpEl.getAttribute('placeholder');
+      }
+      var koPh = inpEl.dataset.koPlaceholder;
+      if (currentLang === 'en') {
+        inpEl.setAttribute('placeholder', activePageDict[koPh] || COMMON_PLACEHOLDER_MAP[koPh] || koPh);
+      } else {
+        inpEl.setAttribute('placeholder', koPh);
+      }
+    }
+  }
+
+  function setLang(lang) {
+    var next = lang === 'en' ? 'en' : 'ko';
+    currentLang = next;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(STORAGE_KEY_LANG, next);
+      }
+    } catch (e) {
+      // ignore blocked storage
+    }
+    if (typeof document !== 'undefined') {
+      applyDomTranslations();
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+        window.dispatchEvent(new CustomEvent('sellermath:langchange', { detail: { lang: next } }));
+      }
+    }
+    return next;
+  }
+
+  function initI18n(pageDict, pageEnTitle) {
+    activePageDict = pageDict || {};
+    if (pageEnTitle) activePageTitles.en = pageEnTitle;
+    if (typeof document === 'undefined') return;
+
+    var headerInner = document.querySelector('.header-inner');
+    if (headerInner && !headerInner.querySelector('.lang-switch-btn')) {
+      var btn = createEl('button', 'lang-switch-btn', currentLang === 'en' ? '🌐 한국어' : '🌐 EN');
+      btn.type = 'button';
+      btn.addEventListener('click', function () {
+        setLang(currentLang === 'en' ? 'ko' : 'en');
+      });
+      headerInner.appendChild(btn);
+      langButtonRef = btn;
+    } else if (headerInner) {
+      langButtonRef = headerInner.querySelector('.lang-switch-btn');
+    }
+
+    applyDomTranslations();
+  }
+
   return {
     DEFAULT_INPUTS: DEFAULT_INPUTS,
     FEE_BASIS_LABELS: FEE_BASIS_LABELS,
     AD_REVENUE_BASIS_LABELS: AD_REVENUE_BASIS_LABELS,
     TAXPAYER_LABELS: TAXPAYER_LABELS,
+    getLang: getLang,
+    setLang: setLang,
+    t: t,
+    initI18n: initI18n,
     cloneDefaults: cloneDefaults,
     normalizeInputs: normalizeInputs,
     calculateProfit: calculateProfit,

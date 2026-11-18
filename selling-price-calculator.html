@@ -316,17 +316,17 @@
         <h2>실전 케이스 스터디: 원가에 단순 마진율을 곱하면 역마진이 나는 이유 &amp; 쿠폰 부담별 역산 비교</h2>
 
         <h3>1. 원가 10,000원 상품에 "마진 30% 붙여서 13,000원"을 매기면 왜 적자가 날까?</h3>
-        <p>
+        <p data-i18n-en="A common pricing mistake is multiplying cost by 1.3 (or dividing by 0.7) while ignoring marketplace fees, seller courier costs, and ad spend. What happens if you price a 10,000 KRW item at 13,000 KRW?">
           초보 셀러가 가격을 정할 때 가장 흔히 쓰는 위험한 계산법은 <strong>원가 × (1 + 마진율)</strong> 또는 <strong>원가 ÷ (1 - 목표마진율)</strong>만 계산하고 플랫폼 수수료, 판매자 배송비, 광고비를 잊는 것입니다.
           예를 들어 원가 10,000원 상품에 단순히 1.3을 곱해 13,000원에 판매하면 어떻게 될까요?
         </p>
         <ul>
-          <li>판매가 13,000원에서 마켓 수수료 10%(1,300원), 무료배송 택배 원가(3,000원), 건당 광고비(6,000원)를 빼면 남는 돈은 <strong>13,000 - 10,000 - 1,300 - 3,000 - 6,000 = -7,300원 적자</strong>가 됩니다.</li>
-          <li>수수료는 '원가'가 아니라 '판매가(매출)'에 비례해 커지기 때문에, 목표 순이익(예: 8,000원)이나 목표 마진율(예: 26.67%)을 지키려면 고정 비용 합계(원가 + 배송비 + 광고비 + 목표이익 = 27,000원)를 <strong>(1 - 수수료율 0.10 = 0.90)</strong>으로 나눈 <strong>30,000원</strong>으로 판매가를 책정해야 합니다.</li>
+          <li data-i18n-en="At 13,000 KRW, deducting 10% fee (1,300 KRW), courier cost (3,000 KRW), and ad spend (6,000 KRW) leaves -7,300 KRW net loss per order.">판매가 13,000원에서 마켓 수수료 10%(1,300원), 무료배송 택배 원가(3,000원), 건당 광고비(6,000원)를 빼면 남는 돈은 <strong>13,000 - 10,000 - 1,300 - 3,000 - 6,000 = -7,300원 적자</strong>가 됩니다.</li>
+          <li data-i18n-en="Because marketplace fees scale with selling price—not cost—achieving an 8,000 KRW target profit requires dividing total costs + target profit (27,000 KRW) by (1 - 0.10 = 0.90), yielding a 30,000 KRW selling price.">수수료는 '원가'가 아니라 '판매가(매출)'에 비례해 커지기 때문에, 목표 순이익(예: 8,000원)이나 목표 마진율(예: 26.67%)을 지키려면 고정 비용 합계(원가 + 배송비 + 광고비 + 목표이익 = 27,000원)를 <strong>(1 - 수수료율 0.10 = 0.90)</strong>으로 나눈 <strong>30,000원</strong>으로 판매가를 책정해야 합니다.</li>
         </ul>
 
         <h3>2. 판매자 부담 10% 쿠폰 vs 플랫폼 보전 10% 쿠폰 적용 시 역산 판매가 비교</h3>
-        <p>
+        <p data-i18n-en="Under identical costs (10,000 KRW COGS, 3,000 KRW shipping, 6,000 KRW ad spend, 10% fee, 8,000 KRW target profit), compare the required list price between a seller-funded 10% coupon and a platform-reimbursed 10% coupon:">
           같은 조건(원가 10,000원, 판매자 택배원가 3,000원, 광고비 6,000원, 마켓 수수료 10%, <strong>목표 순이익 8,000원</strong>)에서
           판매자가 10% 쿠폰을 직접 부담할 때와 플랫폼이 10% 쿠폰을 전액 정산 보전해 줄 때 권장 등록 정가가 어떻게 달라지는지 비교해 보세요.
         </p>
@@ -385,7 +385,7 @@
             </tbody>
           </table>
         </div>
-        <p style="margin-top: 12px;">
+        <p style="margin-top: 12px;" data-i18n-en="With a seller-funded 10% coupon, list price must rise to 33,333 KRW to protect an 8,000 KRW profit. In a platform-reimbursed 10% promo, listing at 30,000 KRW (or 29,670 KRW if fee is charged on buyer payment) displays ~27,000 KRW to buyers while preserving your full 8,000 KRW profit.">
           표에서 보듯 판매자가 10% 쿠폰을 스스로 부담하면 등록 정가를 <strong>33,333원</strong>까지 올려야 동일한 순이익 8,000원을 지킬 수 있습니다.
           반면 플랫폼이 10% 쿠폰을 정산 보전해 주는 기획전에 참여하면 정가 <strong>30,000원</strong>(또는 실결제가 기준 수수료 시 <strong>29,670원</strong>)만 설정해도 고객에게는 27,000원대 할인가로 노출되면서 셀러는 목표 이익 8,000원을 온전히 확보할 수 있습니다.
         </p>
@@ -396,7 +396,7 @@
         <div class="faq-list">
           <details class="faq-item">
             <summary>Round-Trip 자동 역검증 배지는 어떤 원리로 작동하나요?</summary>
-            <p>
+            <p data-i18n-en="Rather than outputting an unverified formula result, the reverse price is fed right back into SellerMath.calculateProfit to verify that the resulting profit or net margin truly matches your target within strict floating-point tolerance.">
               역산 알고리즘이 도출한 판매가를 단순히 화면에 표시하고 끝내는 것이 아니라, 해당 판매가를 순이익 계산기(<code>SellerMath.calculateProfit</code>)의 입력값으로 다시 집어넣어 산출된 순이익·순마진율이 사용자가 지정한 목표값과 실제로 일치하는지 교차 검증한 뒤 통과 시에만 배지를 표시합니다.
             </p>
           </details>
@@ -520,6 +520,68 @@
         return SM.normalizeInputs(current);
       }
 
+      var PAGE_DICT = {
+        '계산기 03 · 동적 역산 & 역검증': 'Calculator 03 · Dynamic Reverse Pricing',
+        '쿠폰 · 수수료 반영 목표 판매가 역산 계산기': 'Target Margin Selling Price Calculator (Coupons & Fees)',
+        '원가·택배비·광고비·수수료 기준·쿠폰 부담 주체·VAT 조건을 반영해 목표 순이익 또는 목표 마진율을 달성하는 등록 정가를 역산하고, 공통 회계 엔진에 다시 대입해 자동 역검증합니다.': 'Calculates exact list prices to meet target profit or net margin across fee bases, coupon funding, courier costs, and VAT—verified via Round-Trip checks.',
+        '목표 수익 · 비용 조건 입력': 'Target Profit & Cost Inputs',
+        '1. 목표 수익 기준 선택': '1. Target Profit Basis',
+        '목표 순이익 금액 (원)': 'Target Profit Amount (KRW)',
+        '목표 순마진율 (%)': 'Target Net Margin (%)',
+        '목표 건당 순이익 (원)': 'Target Unit Profit (KRW)',
+        '수수료율 + 할인율 + 목표 마진율 합계가 100% 미만이어야 역산이 가능합니다.': 'Fee rate + discount rate + target margin must stay below 100%.',
+        '2. 쿠폰 · 할인 부담 조건 (정액 / 정률)': '2. Coupon & Discount Funding (Fixed / %)',
+        '판매자 부담 할인 방식': 'Seller Discount Type',
+        '정액 할인 (원)': 'Fixed Amount (KRW)',
+        '정률 할인 (정가의 %)': 'Percentage (% of List)',
+        '판매자 할인 금액 (원)': 'Seller Discount (KRW)',
+        '판매자 할인율 (%)': 'Seller Discount Rate (%)',
+        '플랫폼 쿠폰 방식': 'Platform Coupon Type',
+        '정액 쿠폰 (원)': 'Fixed Coupon (KRW)',
+        '정률 쿠폰 (정가의 %)': 'Percentage (% of List)',
+        '플랫폼 쿠폰 금액 (원)': 'Platform Coupon (KRW)',
+        '플랫폼 쿠폰율 (%)': 'Platform Coupon Rate (%)',
+        '역산 결과 시나리오 저장': 'Save Priced Scenario',
+        '순이익·ROAS 계산기에 가격 반영': 'Sync Price to Profit/ROAS',
+        '역산 결과 복사': 'Copy Price Summary',
+        '목표 판매가 역산 · 자동 역검증 결과': 'Target Price Reverse Calculation & Verification',
+        '대수 역산 및 이진 탐색 수치해법으로 찾은 등록 정가를 공통 회계 엔진에 재대입하여 검증합니다.': 'Algebraic + bisection solution re-verified against the shared accounting engine.',
+        '등록 정가 대비 추가 할인율(5% ~ 30%)별 수익 시뮬레이터': 'Additional Promo Discount (5%~30%) Profit Simulator',
+        '역산된 권장 정가에서 추가 프로모션 할인을 적용할 때 마진이 어떻게 변하는지 시뮬레이션합니다.': 'Simulate margin sensitivity when running extra discounts off the recommended list price.',
+        '역산 판매가 검증: 2단계 수익 계산 내역 (Waterfall Breakdown)': 'Price Audit: 2-Stage Waterfall Breakdown',
+        '1원 단위 반올림 적용 등록 정가를 기준으로 계산된 정산 예정액과 영업 추정 이익입니다.': 'Estimated payout and profit calculated at the 1-KRW rounded list price.',
+        '실전 케이스 스터디: 원가에 단순 마진율을 곱하면 역마진이 나는 이유 & 쿠폰 부담별 역산 비교': 'Case Study: Why Simple Cost Markups Lose Money & Coupon Pricing Comparison',
+        '1. 원가 10,000원 상품에 "마진 30% 붙여서 13,000원"을 매기면 왜 적자가 날까?': '1. Why Pricing a 10,000 KRW Item at 13,000 KRW (1.3x Cost) Loses Money',
+        '2. 판매자 부담 10% 쿠폰 vs 플랫폼 보전 10% 쿠폰 적용 시 역산 판매가 비교': '2. Seller-Funded 10% Coupon vs. Platform-Reimbursed 10% Coupon',
+        '판매자 부담 10% 쿠폰 적용해보기': 'Test Seller-Funded 10% Coupon',
+        '플랫폼 보전 10% 쿠폰 적용해보기': 'Test Platform-Reimbursed 10% Coupon',
+        '비교 구분 (목표 순이익 8,000원 달성 조건)': 'Metric (For 8,000 KRW Target Profit)',
+        '판매자 부담 10% 쿠폰': 'Seller-Funded 10% Coupon',
+        '플랫폼 보전 10% 쿠폰 (매출 비례 수수료)': 'Platform Coupon (Seller Rev Fee)',
+        '플랫폼 보전 10% 쿠폰 (실결제가 비례 수수료)': 'Platform Coupon (Buyer Pay Fee)',
+        '역산된 권장 등록 정가 (P_list)': 'Recommended List Price (P_list)',
+        '33,333원': '33,333 KRW',
+        '30,000원': '30,000 KRW',
+        '29,670원': '29,670 KRW',
+        '쿠폰 할인 금액 (10%)': 'Coupon Discount (10%)',
+        '3,333원 (판매자 부담)': '3,333 KRW (Seller)',
+        '3,000원 (플랫폼 보전)': '3,000 KRW (Reimbursed)',
+        '2,967원 (플랫폼 보전)': '2,967 KRW (Reimbursed)',
+        '고객 실제 결제 상품가 (P_pay)': 'Buyer Checkout Price (P_pay)',
+        '27,000원': '27,000 KRW',
+        '26,703원': '26,703 KRW',
+        '판매자 귀속 상품 매출 (R_seller)': 'Seller Attributed Rev (R_seller)',
+        '마켓 수수료 (10%)': 'Marketplace Fee (10%)',
+        '3,000원': '3,000 KRW',
+        '2,670원 (실결제가 기준)': '2,670 KRW (Buyer Pay Basis)',
+        '플랫폼 정산 예정액 / 최종 순이익': 'Est. Payout / Net Profit',
+        '정산 27,000원 / 이익 8,000원': 'Payout 27,000 / Profit 8,000 KRW',
+        'Round-Trip 자동 역검증 배지는 어떤 원리로 작동하나요?': 'How does the Round-Trip Verification badge work?',
+        '수수료율과 목표 마진율 합계가 100% 이상이면 왜 계산이 차단되나요?': 'Why is calculation blocked when Fee Rate + Target Margin >= 100%?',
+        '판매가에서 마켓 수수료와 할인율을 떼고 남은 비율보다 높은 순마진율을 요구하면 판매가를 무한대로 올려도 목표 마진율에 도달할 수 없는 수학적 불능 상태가 됩니다. 이 경우 잘못된 음수 가격이나 억지 숫자를 보여주지 않고 계산 불가 사유를 정확히 안내합니다.': 'If your target margin exceeds what remains after marketplace fees and discounts, no finite positive selling price can ever satisfy the equation. Blocking prevents misleading prices.',
+        '본 계산 결과는 참고용 추정치이며 실제 마켓 정산 결과와 1원 단위 반올림 차이가 발생할 수 있습니다.': 'Results are estimates only and may differ by 1 KRW rounding on live marketplaces.'
+      };
+
       function syncConditionalUi(inp) {
         var isProfit = inp.targetMode === 'profit_amount';
         tabProfit.classList.toggle('active', isProfit);
@@ -536,10 +598,10 @@
         customFeeWrap.hidden = !isCustom;
         if (isCustom && inp.customFeeMode === 'fixed_fee') {
           document.getElementById('feeRate').disabled = true;
-          document.getElementById('customFeeBaseLabel').textContent = '고정 수수료 금액 (원)';
+          document.getElementById('customFeeBaseLabel').textContent = SM.t('고정 수수료 금액 (원)', 'Fixed Fee Amount (KRW)');
         } else {
           document.getElementById('feeRate').disabled = false;
-          document.getElementById('customFeeBaseLabel').textContent = '직접 입력 수수료 기준금액 (원)';
+          document.getElementById('customFeeBaseLabel').textContent = SM.t('직접 입력 수수료 기준금액 (원)', 'Custom Fee Basis Amount (KRW)');
         }
         simplifiedFields.hidden = inp.taxpayerType !== 'simplified';
       }
@@ -551,7 +613,14 @@
         if (!revRes.success || revRes.discountSimulations.length === 0) {
           simChartBox.hidden = true;
           simTableBox.appendChild(
-            SM.createEl('p', 'empty-state', '유효한 판매가가 역산되면 추가 할인율(5%~30%)별 수익 비교표와 막대 차트가 표시됩니다.')
+            SM.createEl(
+              'p',
+              'empty-state',
+              SM.t(
+                '유효한 판매가가 역산되면 추가 할인율(5%~30%)별 수익 비교표와 막대 차트가 표시됩니다.',
+                'Additional discount simulation table and chart appear when a valid price is found.'
+              )
+            )
           );
           return;
         }
@@ -561,8 +630,12 @@
         var table = SM.createEl('table', 'data-table');
         var thead = SM.createEl('thead');
         var htr = SM.createEl('tr');
-        ['추가 할인율', '고객 실결제가', '정산 예정액', '공헌이익(C)', '영업 추정 이익', '순마진율', '상태'].forEach(function (h) {
-          htr.appendChild(SM.createEl('th', h === '추가 할인율' || h === '상태' ? '' : 'num', h));
+        var ths =
+          SM.getLang() === 'en'
+            ? ['Extra Discount', 'Buyer Paid', 'Payout', 'Contrib. (C)', 'Est. Profit', 'Net Margin', 'Status']
+            : ['추가 할인율', '고객 실결제가', '정산 예정액', '공헌이익(C)', '영업 추정 이익', '순마진율', '상태'];
+        ths.forEach(function (h, idx) {
+          htr.appendChild(SM.createEl('th', idx === 0 || idx === 6 ? '' : 'num', h));
         });
         thead.appendChild(htr);
         table.appendChild(thead);
@@ -580,7 +653,7 @@
               'td',
               '',
               row.extraDiscountPct === 0
-                ? '0% (권장 정가 기준)'
+                ? SM.t('0% (권장 정가 기준)', '0% (At Rec. Price)')
                 : row.extraDiscountPct + '% (-' + SM.formatCurrency(row.extraDiscountAmount) + ')'
             )
           );
@@ -592,7 +665,12 @@
           tr.appendChild(SM.createEl('td', 'num', row.netMarginLabel));
 
           var pillTd = SM.createEl('td');
-          var pillCls = row.status === '흑자' ? 'status-pill status-profit' : row.status === '적자' ? 'status-pill status-loss' : 'status-pill status-be';
+          var pillCls =
+            row.status === '흑자' || row.status === 'Profit'
+              ? 'status-pill status-profit'
+              : row.status === '적자' || row.status === 'Loss'
+              ? 'status-pill status-loss'
+              : 'status-pill status-be';
           pillTd.appendChild(SM.createEl('span', pillCls, row.status));
           tr.appendChild(pillTd);
           tbody.appendChild(tr);
@@ -603,12 +681,12 @@
 
         // Pure CSS Bar Chart (안전한 DOM API)
         simChartBox.hidden = false;
-        simChartBox.appendChild(SM.createEl('h3', 'section-subtitle', '할인율별 건당 영업 추정 이익 시각화'));
+        simChartBox.appendChild(SM.createEl('h3', 'section-subtitle', SM.t('할인율별 건당 영업 추정 이익 시각화', 'Operating Profit by Additional Discount Tier')));
         var chartList = SM.createEl('div', 'bar-chart-list');
 
         revRes.discountSimulations.forEach(function (row) {
           var chartRow = SM.createEl('div', 'bar-chart-row');
-          chartRow.appendChild(SM.createEl('span', '', row.extraDiscountPct + '% 할인'));
+          chartRow.appendChild(SM.createEl('span', '', row.extraDiscountPct + SM.t('% 할인', '% Off')));
 
           var track = SM.createEl('div', 'bar-track');
           var widthPct = Math.min(100, Math.max(2, (Math.abs(row.operatingProfit) / maxAbsProfit) * 100));
@@ -642,13 +720,13 @@
           verifyBadge.textContent = '';
 
           var failCard = SM.createEl('div', 'kpi-card kpi-negative');
-          failCard.appendChild(SM.createEl('span', 'kpi-label', '역산 결과'));
-          failCard.appendChild(SM.createEl('strong', 'kpi-value', '계산 불가'));
-          failCard.appendChild(SM.createEl('span', 'kpi-sub', '조건을 조정한 뒤 다시 확인하세요.'));
+          failCard.appendChild(SM.createEl('span', 'kpi-label', SM.t('역산 결과', 'Reverse Pricing')));
+          failCard.appendChild(SM.createEl('strong', 'kpi-value', SM.t('계산 불가', 'Unachievable')));
+          failCard.appendChild(SM.createEl('span', 'kpi-sub', SM.t('조건을 조정한 뒤 다시 확인하세요.', 'Adjust parameters and retry.')));
           kpiGrid.appendChild(failCard);
 
           renderDiscountSimulator(revRes);
-          waterfallContainer.appendChild(SM.createEl('p', 'empty-state', '역산 불가 조건에서는 상세 정산 내역을 산출하지 않습니다.'));
+          waterfallContainer.appendChild(SM.createEl('p', 'empty-state', SM.t('역산 불가 조건에서는 상세 정산 내역을 산출하지 않습니다.', 'Breakdown unavailable when parameters have no valid solution.')));
           return;
         }
 
@@ -661,27 +739,27 @@
         var vRounded = revRes.verifiedRounded;
         var kpis = [
           {
-            label: '권장 등록 정가 (1원 반올림)',
+            label: SM.t('권장 등록 정가 (1원 반올림)', 'Recommended List Price'),
             value: SM.formatCurrency(revRes.roundedListPrice),
-            sub: '정밀 역산 해: ' + SM.formatNumber(revRes.exactListPrice, 2) + '원',
+            sub: SM.t('정밀 역산 해: ', 'Exact solution: ') + SM.formatNumber(revRes.exactListPrice, 2) + SM.t('원', ' KRW'),
             cls: 'kpi-highlight'
           },
           {
-            label: '고객 실제 결제 상품가',
+            label: SM.t('고객 실제 결제 상품가', 'Customer Actual Product Price'),
             value: SM.formatCurrency(vRounded.customerPayment),
-            sub: '할인 반영 후 결제액',
+            sub: SM.t('할인 반영 후 결제액', 'After coupons & discounts'),
             cls: ''
           },
           {
-            label: '플랫폼 정산 예정액',
+            label: SM.t('플랫폼 정산 예정액', 'Est. Platform Payout'),
             value: SM.formatCurrency(vRounded.platformSettlement),
-            sub: '수수료 ' + SM.formatCurrency(vRounded.feeVat.cash) + ' 차감 후',
+            sub: SM.t('수수료 ', 'After ') + SM.formatCurrency(vRounded.feeVat.cash) + SM.t(' 차감 후', ' fee'),
             cls: ''
           },
           {
-            label: '검증된 영업 추정 이익 / 마진율',
+            label: SM.t('검증된 영업 추정 이익 / 마진율', 'Verified Operating Profit / Margin'),
             value: SM.formatCurrency(vRounded.operatingProfit),
-            sub: '순마진율 ' + vRounded.netMarginLabel,
+            sub: SM.t('순마진율 ', 'Net Margin ') + vRounded.netMarginLabel,
             cls: vRounded.operatingProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
           }
         ];
@@ -706,16 +784,16 @@
           function (id) {
             SM.deleteScenario(id);
             refreshScenarios();
-            showToast('시나리오를 삭제했습니다.');
+            showToast(SM.t('시나리오를 삭제했습니다.', 'Scenario deleted.'));
           },
           function (list) {
             SM.exportScenariosToCsv(list, 'seller-math-reverse-scenarios');
-            showToast('CSV 파일을 다운로드했습니다.');
+            showToast(SM.t('CSV 파일을 다운로드했습니다.', 'CSV file downloaded.'));
           },
           function () {
             SM.clearScenarios();
             refreshScenarios();
-            showToast('시나리오를 모두 삭제했습니다.');
+            showToast(SM.t('시나리오를 모두 삭제했습니다.', 'All scenarios cleared.'));
           }
         );
       }
@@ -744,12 +822,12 @@
         SM.saveSharedInputs(def);
         writeInputsToForm(def);
         renderResults();
-        showToast('표준 조건(목표 순이익 8,000원)으로 초기화했습니다.');
+        showToast(SM.t('표준 조건(목표 순이익 8,000원)으로 초기화했습니다.', 'Reset to standard 8,000 KRW profit target.'));
       });
 
       document.getElementById('btn-case-seller-coupon').addEventListener('click', function () {
         var sample = Object.assign(SM.cloneDefaults(), {
-          itemName: '판매자 부담 10% 쿠폰 역산 사례',
+          itemName: SM.t('판매자 부담 10% 쿠폰 역산 사례', 'Seller-Funded 10% Coupon Case'),
           targetMode: 'profit_amount',
           targetProfitAmount: 8000,
           sellerDiscountType: 'rate',
@@ -768,12 +846,12 @@
         writeInputsToForm(sample);
         renderResults();
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast('판매자 부담 10% 쿠폰 역산 사례를 적용했습니다.');
+        showToast(SM.t('판매자 부담 10% 쿠폰 역산 사례를 적용했습니다.', 'Applied Seller-Funded 10% Coupon case.'));
       });
 
       document.getElementById('btn-case-platform-coupon').addEventListener('click', function () {
         var sample = Object.assign(SM.cloneDefaults(), {
-          itemName: '플랫폼 보전 10% 쿠폰 역산 사례',
+          itemName: SM.t('플랫폼 보전 10% 쿠폰 역산 사례', 'Platform-Reimbursed 10% Coupon Case'),
           targetMode: 'profit_amount',
           targetProfitAmount: 8000,
           sellerDiscountType: 'fixed',
@@ -792,23 +870,23 @@
         writeInputsToForm(sample);
         renderResults();
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast('플랫폼 보전 10% 쿠폰 역산 사례를 적용했습니다.');
+        showToast(SM.t('플랫폼 보전 10% 쿠폰 역산 사례를 적용했습니다.', 'Applied Platform-Reimbursed 10% Coupon case.'));
       });
 
       document.getElementById('btn-save-scenario').addEventListener('click', function () {
         if (!lastReverseResult || !lastReverseResult.success) {
-          showToast('유효한 역산 결과가 있을 때만 저장할 수 있습니다.');
+          showToast(SM.t('유효한 역산 결과가 있을 때만 저장할 수 있습니다.', 'Calculate a valid price first.'));
           return;
         }
         var v = lastReverseResult.verifiedRounded;
         SM.saveScenario(v.inputs.itemName, v);
         refreshScenarios();
-        showToast('역산 시나리오를 비교함에 저장했습니다.');
+        showToast(SM.t('역산 시나리오를 비교함에 저장했습니다.', 'Saved priced scenario.'));
       });
 
       document.getElementById('btn-send-to-shared').addEventListener('click', function () {
         if (!lastReverseResult || !lastReverseResult.success) {
-          showToast('유효한 역산 결과가 있을 때만 반영할 수 있습니다.');
+          showToast(SM.t('유효한 역산 결과가 있을 때만 반영할 수 있습니다.', 'Calculate a valid price first.'));
           return;
         }
         var v = lastReverseResult.verifiedRounded;
@@ -818,29 +896,34 @@
           platformDiscount: v.platformDiscount
         });
         SM.saveSharedInputs(updated);
-        showToast('역산된 정가(' + SM.formatCurrency(v.listPrice) + ')를 순이익·ROAS 계산기 공용 입력값에 반영했습니다.');
+        showToast(SM.t('역산된 정가(' + SM.formatCurrency(v.listPrice) + ')를 순이익·ROAS 계산기 공용 입력값에 반영했습니다.', 'Synced ' + SM.formatCurrency(v.listPrice) + ' to Profit & ROAS calculators.'));
       });
 
       document.getElementById('btn-copy-summary').addEventListener('click', function () {
         if (!lastReverseResult || !lastReverseResult.success) {
-          showToast('복사할 역산 결과가 없습니다.');
+          showToast(SM.t('복사할 역산 결과가 없습니다.', 'No reverse price result to copy.'));
           return;
         }
         var v = lastReverseResult.verifiedRounded;
         var lines = [
-          '[SELLER MATH 판매가 역산 요약]',
-          '상품명: ' + (v.inputs.itemName || '미지정'),
-          '권장 등록 정가(반올림): ' + SM.formatCurrency(lastReverseResult.roundedListPrice),
-          '고객 실결제가: ' + SM.formatCurrency(v.customerPayment),
-          '플랫폼 정산 예정액: ' + SM.formatCurrency(v.platformSettlement),
-          '검증 영업 추정 이익: ' + SM.formatCurrency(v.operatingProfit) + ' (순마진율 ' + v.netMarginLabel + ')',
+          SM.t('[SELLER MATH 판매가 역산 요약]', '[SELLER MATH Target Price Summary]'),
+          SM.t('상품명: ', 'Item: ') + (v.inputs.itemName || SM.t('미지정', 'Untitled')),
+          SM.t('권장 등록 정가(반올림): ', 'Recommended List Price: ') + SM.formatCurrency(lastReverseResult.roundedListPrice),
+          SM.t('고객 실결제가: ', 'Customer Payment: ') + SM.formatCurrency(v.customerPayment),
+          SM.t('플랫폼 정산 예정액: ', 'Est. Settlement: ') + SM.formatCurrency(v.platformSettlement),
+          SM.t('검증 영업 추정 이익: ', 'Verified Profit: ') + SM.formatCurrency(v.operatingProfit) + SM.t(' (순마진율 ', ' (Net Margin ') + v.netMarginLabel + ')',
           lastReverseResult.verificationBadgeText
         ];
         SM.copyTextToClipboard(lines.join('\n')).then(function (ok) {
-          showToast(ok ? '역산 요약을 클립보드에 복사했습니다.' : '복사에 실패했습니다.');
+          showToast(ok ? SM.t('역산 요약을 클립보드에 복사했습니다.', 'Price summary copied.') : SM.t('복사에 실패했습니다.', 'Copy failed.'));
         });
       });
 
+      SM.initI18n(PAGE_DICT, 'Target Margin Selling Price Calculator | SELLER MATH');
+      window.addEventListener('sellermath:langchange', function () {
+        renderResults();
+        refreshScenarios();
+      });
       writeInputsToForm(SM.loadSharedInputs());
       renderResults();
       refreshScenarios();

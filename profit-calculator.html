@@ -375,18 +375,18 @@
         </div>
 
         <h3>핵심 인사이트: 현금 잔액(12,100원) - 예상 부가세(1,100원) = 실질 영업이익(11,000원)</h3>
-        <p>
+        <p data-i18n-en="In the table above, the 1,100 KRW difference between the 12,100 KRW cash balance and 11,000 KRW supply-basis operating profit equals exact net VAT payable (3,000 Output VAT - 1,900 Input VAT). If inventory was bought without a tax invoice, the 1,000 KRW VAT credit is lost, raising VAT payable to 2,100 KRW and reducing net profit to 10,000 KRW.">
           위 표에서 보듯 현금 기준 잔액 12,100원과 공급가액 기준 실질 영업이익 11,000원의 차이인 <strong>1,100원</strong>은 정확히 매출세액(3,000원)에서 매입세액 합계(1,900원)를 뺀 납부 예정 부가가치세입니다.
           만약 상품 매입 원가 11,000원에 대해 세금계산서를 받지 않고 무자료 현금 사입했다면 매입세액 1,000원을 공제받지 못하므로 납부 부가세는 2,100원으로 늘어나고, 실질 이익은 10,000원으로 하락합니다.
         </p>
 
         <h3>반품 1건 발생 시 왕복 배송비 손실 분석: 정상 판매 몇 건의 이익을 상쇄할까?</h3>
-        <p>
+        <p data-i18n-en="Suppose one seller-fault (or free-return) return occurs on this 33,000 KRW free-shipping item. Round-trip shipping of 6,600 KRW (3,300 outbound + 3,300 return), sunk ad spend of 3,300 KRW, and ~1,100 KRW in packaging/inspection combine for roughly 11,000 KRW in total cash loss (10,000 KRW supply basis).">
           무료배송 조건으로 판매하던 위 33,000원 상품에서 판매자 귀책 사유(또는 무료반품 이벤트)로 반품이 1건 발생했다고 가정해 보겠습니다.
           초도 발송 택배비 3,300원과 회수 택배비 3,300원을 합산한 <strong>왕복 배송비 6,600원(공급가액 6,000원)</strong>이 즉시 현금 손실로 발생합니다.
           여기에 이미 지출해 회수할 수 없는 건당 광고비 3,300원(공급가액 3,000원)과 포장 부자재·검수 인건비 약 1,100원까지 더하면 <strong>반품 1건의 총 매몰 손실은 약 11,000원(공급가액 약 10,000원)</strong>에 달합니다.
         </p>
-        <p>
+        <p data-i18n-en="Even with an 11,000 KRW unit profit, 1 return wipes out 100% of 1 successful order's profit. On a lower-margin item earning 3,000 KRW per sale, a 9,900 KRW return loss requires 3.3+ extra normal sales just to break even. High-return categories must bake expected return shipping into unit cost.">
           즉, 건당 실질 영업이익이 11,000원인 위 상품에서조차 <strong>반품 1건이 발생하면 정상 판매 1건에서 벌어들인 순이익 전체(100%)가 그대로 증발</strong>합니다.
           만약 순마진율이 10% 내외(건당 순이익 3,000원)인 저마진 상품이었다면 왕복 배송비 6,600원 + 광고비 3,300원 손실(9,900원)을 메우기 위해 <strong>정상 판매 3.3건 이상을 추가로 팔아야 겨우 본전</strong>을 회복할 수 있습니다.
           따라서 반품률이 높은 의류·잡화 카테고리는 반드시 예상 반품률과 왕복 배송비를 원가 또는 배송원가 항목에 반영해 마진 방어선을 확인해야 합니다.
@@ -413,7 +413,7 @@
           </details>
           <details class="faq-item">
             <summary>입력한 판매가와 원가 데이터는 서버에 저장되나요?</summary>
-            <p>
+            <p data-i18n-en="No. SELLER MATH is a 100% static website with zero backend databases. All calculations execute locally in your browser, and only your latest numeric presets and saved scenarios are stored in localStorage.">
               아니요. SELLER MATH는 100% 정적 웹사이트로 서버 데이터베이스를 사용하지 않습니다. 모든 계산은 사용자의 브라우저 내부에서 실행되며, 편리한 화면 이동을 위해 마지막 숫자 설정값만 브라우저 <code>localStorage</code>에 보관합니다.
             </p>
           </details>
@@ -512,15 +512,70 @@
         return SM.normalizeInputs(current);
       }
 
+      var PAGE_DICT = {
+        '계산기 01 · 2단계 정산·손익 분리': 'Calculator 01 · 2-Stage Payout & P&L',
+        '쇼핑몰 순이익 · 마진율 · 정산액 정밀 계산기': 'E-Commerce Profit, Margin & Settlement Calculator',
+        '플랫폼이 통장에 입금하는 정산 예정액과 상품 원가·택배비·광고비를 뺀 실제 영업이익, 그리고 세무 참고용 부가세 추정액을 명확히 분리해 산출합니다.': 'Clearly separates estimated marketplace bank payouts from true operating profit after COGS, courier cost, and ads, alongside reference VAT estimates.',
+        '판매 · 비용 조건 입력': 'Sales & Cost Inputs',
+        '3. 광고비 및 월간 판매량 가정': '3. Ad Spend & Monthly Volume',
+        '수익 분석 핵심 지표': 'Key Profit Metrics',
+        '모든 지표는 단일 공통 회계 엔진에서 실시간으로 산출됩니다.': 'All metrics update in real time from the unified accounting engine.',
+        '월간 예상 정산액 및 순이익 시뮬레이션': 'Monthly Payout & Profit Projection',
+        '2단계 수익 계산 과정 상세 내역 (Waterfall Breakdown)': '2-Stage Profit Waterfall Breakdown',
+        '플랫폼 정산 예정액과 셀러 실질 손익, 세무 참고 부가세 추정치를 한눈에 대조할 수 있습니다.': 'Compare platform payouts, operating profit, and VAT reference estimates side by side.',
+        '실전 케이스 스터디: 33,000원(VAT 포함) 상품 정산 vs 손익 vs 부가세 3단 해부': 'Case Study: 33,000 KRW (Incl. VAT) Payout vs. P&L vs. VAT Breakdown',
+        '많은 초보 셀러가 "33,000원에 팔고 원가가 11,000원, 수수료 10%(3,300원), 택배비 3,300원, 광고비 3,300원이면 12,100원이 전부 내 순이익이다"라고 계산합니다. 하지만 일반과세자 기준으로는 통장에 남아 있는 현금 12,100원 안에 추후 세무서에 납부해야 할 부가가치세가 섞여 있습니다. 아래 버튼으로 해당 사례를 계산기에 즉시 불러와 숫자를 직접 대조해 보세요.': 'Many new sellers assume 12,100 KRW remaining cash on a 33,000 KRW sale is pure profit. For general taxpayers, however, that cash still includes VAT owed to the tax office. Load this example below to verify each figure.',
+        '위 33,000원 케이스 스터디 값 계산기에 즉시 적용하기': 'Load 33,000 KRW Case Study into Calculator',
+        '항목 (적격증빙 세금계산서 수취 가정)': 'Line Item (Assuming Qualified Tax Invoices)',
+        '1. 플랫폼 정산 기준': '1. Platform Payout',
+        '2. VAT 포함 현금 흐름': '2. VAT-Incl. Cash Flow',
+        '3. 공급가액 손익 기준': '3. Supply-Value P&L',
+        '예상 부가세 (10%)': 'Est. VAT (10%)',
+        '판매 매출 (고객 결제 33,000원)': 'Sales Revenue (33,000 KRW Paid)',
+        '33,000원': '33,000 KRW',
+        '30,000원': '30,000 KRW',
+        '+3,000원 (매출세액)': '+3,000 KRW (Output)',
+        '(-) 마켓 수수료 (10%)': '(-) Marketplace Fee (10%)',
+        '-3,300원': '-3,300 KRW',
+        '-3,000원': '-3,000 KRW',
+        '-300원 (매입세액)': '-300 KRW (Input)',
+        '(=) 플랫폼 통장 정산 예정액': '(=) Est. Platform Payout',
+        '29,700원': '29,700 KRW',
+        '(-) 상품 매입 원가 (COGS)': '(-) Product Cost (COGS)',
+        '차감 안 됨': 'Not Deducted',
+        '-11,000원': '-11,000 KRW',
+        '-10,000원': '-10,000 KRW',
+        '-1,000원 (매입세액)': '-1,000 KRW (Input)',
+        '(-) 판매자 부담 택배 원가': '(-) Seller Shipping Cost',
+        '(=) 광고 전 공헌이익 (C)': '(=) Contribution Margin (C)',
+        '15,400원': '15,400 KRW',
+        '14,000원': '14,000 KRW',
+        '+1,400원': '+1,400 KRW',
+        '(-) 건당 광고비 지출': '(-) Ad Spend per Order',
+        '(=) 최종 이익 / 납부 부가세 추정': '(=) Final Profit / Est. VAT Payable',
+        '정산액 29,700원': 'Payout 29,700 KRW',
+        '현금 잔액 12,100원': 'Cash 12,100 KRW',
+        '영업이익 11,000원': 'Profit 11,000 KRW',
+        '납부세액 1,100원': 'VAT Due 1,100 KRW',
+        '핵심 인사이트: 현금 잔액(12,100원) - 예상 부가세(1,100원) = 실질 영업이익(11,000원)': 'Key Insight: Cash Balance (12,100) - Est. VAT (1,100) = True Operating Profit (11,000)',
+        '반품 1건 발생 시 왕복 배송비 손실 분석: 정상 판매 몇 건의 이익을 상쇄할까?': 'Return Cost Analysis: How Many Successful Sales Does 1 Return Erase?',
+        '원가나 매출이 0원일 때 왜 ROI와 순마진율이 \'산출 불가\'로 표시되나요?': 'Why do ROI and Net Margin show N/A when COGS or Revenue is zero?',
+        '마진율은 이익을 매출로 나눈 비율이고, ROI(투자수익률)는 이익을 투하 원가(COGS)로 나눈 비율입니다. 분모가 0원 이하일 때 억지로 0%나 무한대(Infinity)를 출력하면 의사결정을 왜곡하므로, 매출 0원 시 마진율과 원가 0원 시 ROI를 각각 산출 불가로 안전하게 표시합니다.': 'Net Margin divides profit by revenue, and ROI divides profit by COGS. Showing 0% or Infinity when denominators are zero misleads pricing decisions, so N/A is shown safely.',
+        '간이과세자인데 예상 부가세 금액이 바로 나오지 않는 이유는 무엇인가요?': 'Why is Simplified Taxpayer VAT pending until an industry rate is selected?',
+        '간이과세자는 업종별 부가가치율(15%~40%)과 적격증빙(세금계산서 등) 수취 비율에 따라 납부세액 계산 구조가 일반과세자와 완전히 다릅니다. 필수 입력 항목인 업종별 부가가치율을 선택하지 않은 상태에서 임의의 세액을 보여드리는 것은 부정확한 정보 제공이 되므로, 고급 설정에서 업종별 부가가치율을 선택하실 때까지 계산을 보류하고 안내 문구를 표시합니다.': 'Simplified VAT relies strictly on your industry value-added rate (15%-40%). To avoid arbitrary estimates, VAT output pauses until you choose an industry rate in Advanced Settings.',
+        '입력한 판매가와 원가 데이터는 서버에 저장되나요?': 'Is my pricing or cost data uploaded to a server?',
+        '본 계산 결과는 참고용 추정치이며 실제 플랫폼 정산서 및 세무사 확정 신고와 다를 수 있습니다.': 'Results are reference estimates only and may differ from official marketplace settlements and tax filings.'
+      };
+
       function syncConditionalUi(inp) {
         var isCustom = inp.feeBasisMode === 'custom_basis';
         customFeeWrap.hidden = !isCustom;
         if (isCustom && inp.customFeeMode === 'fixed_fee') {
           document.getElementById('feeRate').disabled = true;
-          document.getElementById('customFeeBaseLabel').textContent = '고정 수수료 금액 (원)';
+          document.getElementById('customFeeBaseLabel').textContent = SM.t('고정 수수료 금액 (원)', 'Fixed Fee Amount (KRW)');
         } else {
           document.getElementById('feeRate').disabled = false;
-          document.getElementById('customFeeBaseLabel').textContent = '직접 입력 수수료 기준금액 (원)';
+          document.getElementById('customFeeBaseLabel').textContent = SM.t('직접 입력 수수료 기준금액 (원)', 'Custom Fee Basis Amount (KRW)');
         }
         simplifiedFields.hidden = inp.taxpayerType !== 'simplified';
       }
@@ -537,25 +592,25 @@
         SM.clearEl(kpiGrid);
         var kpis = [
           {
-            label: '플랫폼 정산 예정액 (1단계)',
+            label: SM.t('플랫폼 정산 예정액 (1단계)', 'Est. Platform Payout (Stage 1)'),
             value: SM.formatCurrency(res.platformSettlement),
-            sub: '통장 입금 예정 (원가·배송원가·광고 전)',
+            sub: SM.t('통장 입금 예정 (원가·배송원가·광고 전)', 'Bank Payout (Before COGS/Shipping/Ads)'),
             cls: 'kpi-highlight'
           },
           {
-            label: '광고 전 공헌이익 (C)',
+            label: SM.t('광고 전 공헌이익 (C)', 'Pre-Ad Contribution Margin (C)'),
             value: SM.formatCurrency(res.contributionMargin),
-            sub: '공헌이익률 ' + res.contributionMarginLabel,
+            sub: SM.t('공헌이익률 ', 'Contrib. Margin ') + res.contributionMarginLabel,
             cls: res.contributionMargin > 0 ? '' : 'kpi-negative'
           },
           {
-            label: '세금 미반영 영업 추정 이익',
+            label: SM.t('세금 미반영 영업 추정 이익', 'Pre-Tax Est. Operating Profit'),
             value: SM.formatCurrency(res.operatingProfit),
-            sub: inp.accountingBasis === 'supply_basis' ? '공급가액 손익 기준' : 'VAT 포함 현금 기준',
+            sub: inp.accountingBasis === 'supply_basis' ? SM.t('공급가액 손익 기준', 'Supply-Value Basis') : SM.t('VAT 포함 현금 기준', 'VAT-Inclusive Cash Basis'),
             cls: res.operatingProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
           },
           {
-            label: '순마진율 / 원가 대비 ROI',
+            label: SM.t('순마진율 / 원가 대비 ROI', 'Net Margin / Cost ROI'),
             value: res.netMarginLabel,
             sub: 'ROI: ' + res.roiLabel,
             cls: ''
@@ -574,27 +629,27 @@
         SM.clearEl(monthlyGrid);
         var mKpis = [
           {
-            label: '월간 예상 판매량',
-            value: SM.formatNumber(res.monthlyUnits, 0) + '건',
-            sub: inp.dailyVolume + '건/일 × ' + inp.monthlyDays + '일',
+            label: SM.t('월간 예상 판매량', 'Monthly Est. Orders'),
+            value: SM.formatNumber(res.monthlyUnits, 0) + SM.t('건', ' orders'),
+            sub: inp.dailyVolume + SM.t('건/일 × ', '/day × ') + inp.monthlyDays + SM.t('일', 'd'),
             cls: ''
           },
           {
-            label: '월간 예상 플랫폼 정산액',
+            label: SM.t('월간 예상 플랫폼 정산액', 'Monthly Est. Payout'),
             value: SM.formatCurrency(res.monthlySettlement),
-            sub: '월 순매출 ' + SM.formatCurrency(res.monthlyRevenue),
+            sub: SM.t('월 순매출 ', 'Monthly Rev ') + SM.formatCurrency(res.monthlyRevenue),
             cls: 'kpi-highlight'
           },
           {
-            label: '월간 총 광고비 지출',
+            label: SM.t('월간 총 광고비 지출', 'Monthly Ad Spend'),
             value: SM.formatCurrency(res.monthlyAdSpend),
-            sub: '건당 ' + SM.formatCurrency(res.recognizedAdSpend),
+            sub: SM.t('건당 ', 'Per order ') + SM.formatCurrency(res.recognizedAdSpend),
             cls: ''
           },
           {
-            label: '월간 예상 영업 추정 이익',
+            label: SM.t('월간 예상 영업 추정 이익', 'Monthly Est. Operating Profit'),
             value: SM.formatCurrency(res.monthlyOperatingProfit),
-            sub: '월 공헌이익 ' + SM.formatCurrency(res.monthlyContributionMargin),
+            sub: SM.t('월 공헌이익 ', 'Monthly C ') + SM.formatCurrency(res.monthlyContributionMargin),
             cls: res.monthlyOperatingProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
           }
         ];
@@ -619,16 +674,16 @@
           function (id) {
             SM.deleteScenario(id);
             refreshScenarios();
-            showToast('선택한 시나리오를 삭제했습니다.');
+            showToast(SM.t('선택한 시나리오를 삭제했습니다.', 'Selected scenario deleted.'));
           },
           function (list) {
             SM.exportScenariosToCsv(list, 'seller-math-profit-scenarios');
-            showToast('CSV 파일을 다운로드했습니다.');
+            showToast(SM.t('CSV 파일을 다운로드했습니다.', 'CSV file downloaded.'));
           },
           function () {
             SM.clearScenarios();
             refreshScenarios();
-            showToast('저장된 시나리오를 모두 삭제했습니다.');
+            showToast(SM.t('저장된 시나리오를 모두 삭제했습니다.', 'All scenarios cleared.'));
           }
         );
       }
@@ -648,12 +703,12 @@
         SM.saveSharedInputs(def);
         writeInputsToForm(def);
         renderResults();
-        showToast('표준 테스트 값(30,000원 기준)으로 초기화했습니다.');
+        showToast(SM.t('표준 테스트 값(30,000원 기준)으로 초기화했습니다.', 'Reset to standard 30,000 KRW preset.'));
       });
 
       document.getElementById('btn-apply-33k-case').addEventListener('click', function () {
         var case33 = Object.assign(SM.cloneDefaults(), {
-          itemName: '케이스 스터디 33,000원 상품 (VAT 포함)',
+          itemName: SM.t('케이스 스터디 33,000원 상품 (VAT 포함)', 'Case Study 33,000 KRW Item (Incl. VAT)'),
           listPrice: 33000,
           cogs: 11000,
           feeRate: 10,
@@ -667,32 +722,36 @@
         document.getElementById('advanced-vat-panel').open = true;
         renderResults();
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        showToast('33,000원 케이스 스터디 조건이 계산기에 적용되었습니다.');
+        showToast(SM.t('33,000원 케이스 스터디 조건이 계산기에 적용되었습니다.', 'Loaded 33,000 KRW case study inputs.'));
       });
 
       document.getElementById('btn-save-scenario').addEventListener('click', function () {
         if (!lastResult) return;
         SM.saveScenario(lastResult.inputs.itemName, lastResult);
         refreshScenarios();
-        showToast('시나리오 비교함에 저장되었습니다.');
+        showToast(SM.t('시나리오 비교함에 저장되었습니다.', 'Saved to scenario table.'));
       });
 
       document.getElementById('btn-copy-summary').addEventListener('click', function () {
         if (!lastResult) return;
         var summaryText = [
-          '[SELLER MATH 수익 분석 요약]',
-          '상품명: ' + (lastResult.inputs.itemName || '미지정'),
-          '회계 기준: ' + lastResult.accountingBasisLabel,
-          '등록 정가: ' + SM.formatCurrency(lastResult.listPrice) + ' (실결제가: ' + SM.formatCurrency(lastResult.customerPayment) + ')',
-          '1단계 플랫폼 정산 예정액: ' + SM.formatCurrency(lastResult.platformSettlement),
-          '광고 전 공헌이익(C): ' + SM.formatCurrency(lastResult.contributionMargin),
-          '2단계 영업 추정 이익: ' + SM.formatCurrency(lastResult.operatingProfit),
-          '순마진율: ' + lastResult.netMarginLabel + ' / ROI: ' + lastResult.roiLabel,
-          '참고 부가세 추정(' + lastResult.taxEstimate.taxpayerLabel + '): ' + lastResult.taxEstimate.displayAmount
+          SM.t('[SELLER MATH 수익 분석 요약]', '[SELLER MATH Profit Summary]'),
+          SM.t('상품명: ', 'Item: ') + (lastResult.inputs.itemName || SM.t('미지정', 'Untitled')),
+          SM.t('회계 기준: ', 'Basis: ') + lastResult.accountingBasisLabel,
+          SM.t('등록 정가: ', 'List Price: ') + SM.formatCurrency(lastResult.listPrice) + SM.t(' (실결제가: ', ' (Buyer Paid: ') + SM.formatCurrency(lastResult.customerPayment) + ')',
+          SM.t('1단계 플랫폼 정산 예정액: ', 'Stage 1 Est. Payout: ') + SM.formatCurrency(lastResult.platformSettlement),
+          SM.t('광고 전 공헌이익(C): ', 'Pre-Ad Contribution (C): ') + SM.formatCurrency(lastResult.contributionMargin),
+          SM.t('2단계 영업 추정 이익: ', 'Stage 2 Est. Profit: ') + SM.formatCurrency(lastResult.operatingProfit),
+          SM.t('순마진율: ', 'Net Margin: ') + lastResult.netMarginLabel + ' / ROI: ' + lastResult.roiLabel,
+          SM.t('참고 부가세 추정(', 'VAT Ref. (') + lastResult.taxEstimate.taxpayerLabel + '): ' + lastResult.taxEstimate.displayAmount
         ].join('\n');
 
         SM.copyTextToClipboard(summaryText).then(function (ok) {
-          showToast(ok ? '계산 요약을 클립보드에 복사했습니다.' : '복사에 실패했습니다. 브라우저 권한을 확인하세요.');
+          showToast(
+            ok
+              ? SM.t('계산 요약을 클립보드에 복사했습니다.', 'Summary copied to clipboard.')
+              : SM.t('복사에 실패했습니다. 브라우저 권한을 확인하세요.', 'Copy failed. Check clipboard permissions.')
+          );
         });
       });
 
@@ -700,6 +759,11 @@
         window.print();
       });
 
+      SM.initI18n(PAGE_DICT, 'E-Commerce Profit, Margin & Settlement Calculator | SELLER MATH');
+      window.addEventListener('sellermath:langchange', function () {
+        renderResults();
+        refreshScenarios();
+      });
       writeInputsToForm(SM.loadSharedInputs());
       renderResults();
       refreshScenarios();
