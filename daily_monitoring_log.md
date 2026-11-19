@@ -95,3 +95,14 @@
   - `favicon.svg`, `manifest.json`, `404.html`: 전용 `₩` SVG 파비콘, 스마트폰 홈 화면 추가(PWA) 매니페스트, 404 안내 페이지 구축
   - `profit-calculator.html`, `roas-calculator.html`, `selling-price-calculator.html`, `tax-calculator.html`: 검색 리치 스니펫용 `FAQPage` JSON-LD 구조화 데이터 추가
 - **사전 QA 검증:** `qa_verify.js` **13 / 13 PASS** (Test 13 포함), 인라인 JS 구문 **7 / 7 SYNTAX_OK**, DOM ID 무결성 **7 / 7 누락 없음**
+
+
+---
+
+### [UI·UX 개편] 2026-11-19 — Soft Minimal Bento 레이아웃 및 점진적 노출(Progressive Disclosure) 적용 (비용 0원)
+- **브랜드/네이밍 검토:** `셀러매스(SELLER MATH)`는 범용 영단어 조합으로 저작권 대상이 아니며 국내 동일 명칭 SaaS 충돌도 확인되지 않음(단, 향후 상표 등록 시 식별력 있는 고유 수식어 결합 및 KIPRIS 9·35류 사전 조회 권장).
+- **시각적 피로도 완화 & 가독성 개선 (`style.css`, `common.js`):**
+  - **Soft Minimal Bento 디자인:** 히어로 카드 도트 그리드·두꺼운 좌측 보더·콘솔 상단 4px 바·KPI 좌측 보더·점선 구분선을 제거하고 여백(`20px` 라운드, `#eef1f5` 헤어라인 보더, `#f4f6f8` 웜 앨러배스터 배경) 및 타이포 위계를 정비
+  - **보조 텍스트 노이즈 축소:** 1만 원 미만 금액 입력칸 하단 중복 한글 단위 표기(`= 0원`, `= 500원` 등) 숨김 처리 및 7대 마켓 프리셋 버튼명 단축(`스마트스토어`, `쿠팡 일반` 등)
+  - **점진적 노출(Progressive Disclosure):** 부가세 세부 가정 문구 `<details>` 축약 및 `mountProgressiveDrawers()` 적용으로 2차 도구(확장 시뮬레이터·엑셀 일괄·시나리오 비교함)와 긴 상세 가이드·FAQ를 초기 1줄 접힘 카드로 정리(`#btn-save-scenario` 클릭 및 `#hash` 이동 시 자동 펼침)
+- **사전 QA 검증:** `qa_verify.js` **13 / 13 PASS**, 인라인 JS 구문 **7 / 7 SYNTAX_OK**, DOM ID 무결성 **7 / 7 누락 없음**

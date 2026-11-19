@@ -1478,12 +1478,17 @@
       taxBox.appendChild(taxMathLine);
     }
 
+    var taxDetails = createEl('details', 'formula-details tax-assumption-details');
+    taxDetails.appendChild(createEl('summary', '', t('세무 산출 가정 및 제외 항목 보기', 'View Tax Assumptions & Exclusions')));
+    var taxDetailsBody = createEl('div', 'formula-body');
     var taxUl = createEl('ul', 'tax-assumption-list');
     result.taxEstimate.assumptions.forEach(function (txt) {
       taxUl.appendChild(createEl('li', '', txt));
     });
     taxUl.appendChild(createEl('li', 'tax-excluded-note', result.taxEstimate.excludedNote));
-    taxBox.appendChild(taxUl);
+    taxDetailsBody.appendChild(taxUl);
+    taxDetails.appendChild(taxDetailsBody);
+    taxBox.appendChild(taxDetails);
     container.appendChild(taxBox);
 
     // [적용된 산식 및 회계 전제조건 보기] 아코디언
@@ -1958,7 +1963,7 @@
         return;
       }
       var num = Number(raw);
-      if (!Number.isFinite(num)) {
+      if (!Number.isFinite(num) || Math.abs(num) < 10000) {
         hintEl.textContent = '';
         hintEl.hidden = true;
         return;
@@ -2001,6 +2006,229 @@
     refreshCurrencyInputHints();
   }
 
+  var progressiveDrawerEventsBound = false;
+
+  function setDrawerExpanded(card, expanded) {
+    if (!card) return;
+    if (expanded) {
+      card.classList.remove('is-collapsed');
+    } else {
+      card.classList.add('is-collapsed');
+    }
+    var bar = card.firstElementChild;
+    var btn = bar && bar.classList && bar.classList.contains('drawer-toggle-bar')
+      ? bar.querySelector('.drawer-toggle-btn')
+      : null;
+    if (btn) {
+      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      btn.textContent = expanded ? t('접기 ▴', 'Collapse ▴') : t('펼쳐보기 ▾', 'Expand ▾');
+    }
+  }
+
+  function openDrawerByTarget(targetOrSelector) {
+    if (typeof document === 'undefined' || !targetOrSelector) return false;
+    var el = typeof targetOrSelector === 'string' ? document.querySelector(targetOrSelector) : targetOrSelector;
+    if (!el) return false;
+    var card = el.classList && el.classList.contains('collapsible-card')
+      ? el
+      : (typeof el.closest === 'function' ? el.closest('.collapsible-card') : null);
+    if (!card) return false;
+    setDrawerExpanded(card, true);
+    return true;
+  }
+
+  function upsertDrawerBar(card, spec) {
+    if (!card) return;
+    var isCollapsed;
+    var existingBar =
+      card.firstElementChild &&
+      card.firstElementChild.classList &&
+      card.firstElementChild.classList.contains('drawer-toggle-bar')
+        ? card.firstElementChild
+        : null;
+
+    if (!existingBar) {
+      card.classList.add('collapsible-card');
+      card.classList.add('is-collapsed');
+      card.setAttribute('data-drawer-key', spec.key);
+
+      var bar = createEl('div', 'drawer-toggle-bar');
+      var titleGroup = createEl('div', 'drawer-title-group');
+      var badgeEl = createEl('span', 'drawer-badge', spec.getBadge());
+      var headings = createEl('div', 'drawer-headings');
+      var titleEl = createEl('strong', 'drawer-title', spec.getTitle());
+      var subEl = createEl('span', 'drawer-subtitle', spec.getSubtitle());
+      headings.appendChild(titleEl);
+      headings.appendChild(subEl);
+      titleGroup.appendChild(badgeEl);
+      titleGroup.appendChild(headings);
+
+      var btn = createEl('button', 'drawer-toggle-btn', t('펼쳐보기 ▾', 'Expand ▾'));
+      btn.type = 'button';
+      btn.setAttribute('aria-expanded', 'false');
+
+      var toggleCard = function () {
+        setDrawerExpanded(card, card.classList.contains('is-collapsed'));
+      };
+
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        toggleCard();
+      });
+      bar.addEventListener('click', function (ev) {
+        if (ev.target && typeof ev.target.closest === 'function' && ev.target.closest('button, a, input, select')) {
+          return;
+        }
+        toggleCard();
+      });
+
+      bar.appendChild(titleGroup);
+      bar.appendChild(btn);
+      card.insertBefore(bar, card.firstChild);
+    } else {
+      isCollapsed = card.classList.contains('is-collapsed');
+      var exBadge = existingBar.querySelector('.drawer-badge');
+      var exTitle = existingBar.querySelector('.drawer-title');
+      var exSub = existingBar.querySelector('.drawer-subtitle');
+      var exBtn = existingBar.querySelector('.drawer-toggle-btn');
+      if (exBadge) exBadge.textContent = spec.getBadge();
+      if (exTitle) exTitle.textContent = spec.getTitle();
+      if (exSub) exSub.textContent = spec.getSubtitle();
+      if (exBtn) {
+        exBtn.textContent = isCollapsed ? t('펼쳐보기 ▾', 'Expand ▾') : t('접기 ▴', 'Collapse ▴');
+        exBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+      }
+    }
+  }
+
+  function mountProgressiveDrawers() {
+    if (typeof document === 'undefined') return;
+    // 약관·개인정보 안내 페이지는 즉시 열람 가능하도록 접기에서 제외
+    if (document.getElementById('privacy') && document.getElementById('contact')) return;
+
+    var hasWorkbench = Boolean(document.getElementById('seller-workbench-container'));
+
+    var workbenchEl = document.getElementById('seller-workbench-container');
+    if (workbenchEl && workbenchEl.parentElement && workbenchEl.parentElement.classList.contains('card')) {
+      upsertDrawerBar(workbenchEl.parentElement, {
+        key: 'workbench',
+        getBadge: function () {
+          return t('추가 도구 1', 'Extra Tool 1');
+        },
+        getTitle: function () {
+          return t('수입 원가 · 채널 비교 · 반품 리스크 · 정산 자금 시뮬레이터', 'Import COGS · Channel Compare · Return Risk · Cashflow Workbench');
+        },
+        getSubtitle: function () {
+          return t('펼쳐서 마켓별 수수료 비교와 반품·선정산 손익을 바로 계산하세요', 'Expand for multi-channel fee comparison, return loss & cashflow tools');
+        }
+      });
+    }
+
+    var bulkEl = document.getElementById('bulk-excel-container');
+    if (bulkEl && bulkEl.parentElement && bulkEl.parentElement.classList.contains('card')) {
+      upsertDrawerBar(bulkEl.parentElement, {
+        key: 'bulk-excel',
+        getBadge: function () {
+          return hasWorkbench ? t('추가 도구 2', 'Extra Tool 2') : t('일괄 계산', 'Batch Tool');
+        },
+        getTitle: function () {
+          return t('엑셀 · CSV 파일 일괄 수익 계산기', 'Batch Excel & CSV Profit Calculator');
+        },
+        getSubtitle: function () {
+          return t('보유 중인 매출·원가 파일을 올려 여러 상품을 한 번에 계산합니다', 'Upload spreadsheets locally to compute multi-SKU profit & payout at once');
+        }
+      });
+    }
+
+    var scenarioEl = document.getElementById('scenario-container');
+    if (scenarioEl && scenarioEl.parentElement && scenarioEl.parentElement.classList.contains('card')) {
+      upsertDrawerBar(scenarioEl.parentElement, {
+        key: 'scenario',
+        getBadge: function () {
+          return hasWorkbench ? t('추가 도구 3', 'Extra Tool 3') : t('비교함', 'Compare');
+        },
+        getTitle: function () {
+          return t('저장된 상품 시나리오 비교함', 'Saved Product Scenario Comparison');
+        },
+        getSubtitle: function () {
+          return t('시나리오 저장 버튼을 누른 상품들의 마진과 ROAS를 나란히 비교합니다', 'Compare margins and ROAS across your saved SKU scenarios');
+        }
+      });
+    }
+
+    var articles = document.querySelectorAll('.article-section');
+    Array.prototype.forEach.call(articles, function (sec, idx) {
+      var isFaq = Boolean(sec.querySelector('.faq-list'));
+      upsertDrawerBar(sec, {
+        key: (isFaq ? 'faq-' : 'guide-') + idx,
+        getBadge: function () {
+          return isFaq ? t('자주 묻는 질문', 'FAQ') : t('상세 가이드', 'Guide');
+        },
+        getTitle: function () {
+          var h2 = sec.querySelector('h2');
+          if (h2 && h2.textContent) {
+            return String(h2.textContent).trim();
+          }
+          return isFaq ? t('자주 묻는 질문 보기', 'View Frequently Asked Questions') : t('적용 산식 및 실무 가이드 보기', 'View Detailed Formula & Seller Guide');
+        },
+        getSubtitle: function () {
+          return isFaq ? t('핵심 질문과 회계·세무 실무 기준 확인', 'Key seller Q&A on settlement, VAT & ROAS rules') : t('세무·정산 산식 원리와 실전 활용 팁 읽기', 'Read underlying accounting logic and practical tips');
+        }
+      });
+    });
+
+    if (typeof window !== 'undefined' && window.location && window.location.hash && window.location.hash.length > 1) {
+      try {
+        var hashTarget = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+        if (hashTarget) {
+          openDrawerByTarget(hashTarget);
+        }
+      } catch (e) {
+        // 잘못된 URL 해시는 무시
+      }
+    }
+
+    if (!progressiveDrawerEventsBound && typeof window !== 'undefined') {
+      progressiveDrawerEventsBound = true;
+      window.addEventListener('sellermath:langchange', function () {
+        setTimeout(mountProgressiveDrawers, 0);
+      });
+      window.addEventListener('hashchange', function () {
+        if (window.location && window.location.hash && window.location.hash.length > 1) {
+          try {
+            var target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+            if (target) {
+              openDrawerByTarget(target);
+            }
+          } catch (e) {
+            // 잘못된 URL 해시는 무시
+          }
+        }
+      });
+      document.addEventListener('click', function (ev) {
+        var btnSave = ev.target && typeof ev.target.closest === 'function' ? ev.target.closest('#btn-save-scenario') : null;
+        if (btnSave) {
+          openDrawerByTarget('#scenario-container');
+          return;
+        }
+        var anchor = ev.target && typeof ev.target.closest === 'function' ? ev.target.closest('a[href^="#"]') : null;
+        if (anchor) {
+          var href = anchor.getAttribute('href');
+          if (href && href.length > 1) {
+            try {
+              var jumpEl = document.getElementById(decodeURIComponent(href.slice(1)));
+              if (jumpEl) {
+                openDrawerByTarget(jumpEl);
+              }
+            } catch (e) {
+              // 무시
+            }
+          }
+        }
+      });
+    }
+  }
+
   function initI18n(pageDict, pageEnTitle) {
     activePageDict = pageDict || {};
     if (pageEnTitle) activePageTitles.en = pageEnTitle;
@@ -2021,6 +2249,7 @@
 
     applyDomTranslations();
     mountCurrencyInputHints();
+    mountProgressiveDrawers();
   }
 
   /* ==========================================================================
@@ -3894,7 +4123,7 @@
   var MARKETPLACE_PRESETS = [
     {
       key: 'smartstore_linked',
-      nameKo: '스마트스토어 (검색연동)',
+      nameKo: '스마트스토어',
       nameEn: 'SmartStore (Search)',
       feeRate: 5.63,
       shippingFeeRate: 3.63,
@@ -3904,7 +4133,7 @@
     },
     {
       key: 'smartstore_direct',
-      nameKo: '스마트스토어 (직접유입)',
+      nameKo: '스토어 직접',
       nameEn: 'SmartStore (Direct)',
       feeRate: 3.63,
       shippingFeeRate: 3.63,
@@ -3914,7 +4143,7 @@
     },
     {
       key: 'coupang_general',
-      nameKo: '쿠팡 마켓 (일반)',
+      nameKo: '쿠팡 일반',
       nameEn: 'Coupang (General)',
       feeRate: 10.8,
       shippingFeeRate: 3.3,
@@ -3924,7 +4153,7 @@
     },
     {
       key: 'coupang_digital',
-      nameKo: '쿠팡 마켓 (가전·디지털)',
+      nameKo: '쿠팡 디지털',
       nameEn: 'Coupang (Digital)',
       feeRate: 7.8,
       shippingFeeRate: 3.3,
@@ -3934,7 +4163,7 @@
     },
     {
       key: 'openmarket_11st_gmarket',
-      nameKo: '11번가 · G마켓 · 옥션',
+      nameKo: '11번가·G마켓',
       nameEn: '11st / Gmarket / Auction',
       feeRate: 13.0,
       shippingFeeRate: 3.3,
@@ -3944,7 +4173,7 @@
     },
     {
       key: 'fashion_ably_zigzag',
-      nameKo: '에이블리 · 지그재그',
+      nameKo: '에이블리·지그',
       nameEn: 'Ably / Zigzag',
       feeRate: 11.0,
       shippingFeeRate: 3.3,
@@ -3954,7 +4183,7 @@
     },
     {
       key: 'own_mall_pg',
-      nameKo: '자사몰 (PG 기본)',
+      nameKo: '자사몰 PG',
       nameEn: 'Own Store (PG)',
       feeRate: 3.3,
       shippingFeeRate: 3.3,
@@ -5084,6 +5313,8 @@
     formatKoreanUnitCurrency: formatKoreanUnitCurrency,
     mountCurrencyInputHints: mountCurrencyInputHints,
     refreshCurrencyInputHints: refreshCurrencyInputHints,
+    mountProgressiveDrawers: mountProgressiveDrawers,
+    openDrawerByTarget: openDrawerByTarget,
     formatNumber: formatNumber,
     formatPercent: formatPercent,
     escapeCsvCell: escapeCsvCell,
