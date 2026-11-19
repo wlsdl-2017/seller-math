@@ -278,9 +278,9 @@
   }
 
   /**
-   * 비용 항목 VAT 분해 및 매입세액 공제 처리 헬퍼
+   * 비용 항목 VAT 분해 및 매입세액 공제 처리 헬퍼 (면세사업자 매입부가세 불공제·전액 비용화 포함)
    */
-  function splitVatCost(amount, vatIncluded, vatDeductible, accountingBasis) {
+  function splitVatCost(amount, vatIncluded, vatDeductible, accountingBasis, taxpayerType) {
     var cash, supply, vat;
     if (vatIncluded) {
       cash = amount;
@@ -291,11 +291,15 @@
       vat = amount * VAT_RATE;
       cash = supply + vat;
     }
-    var deductibleVat = vatDeductible ? vat : 0;
+    var effectiveDeductible = taxpayerType === 'exempt' ? false : Boolean(vatDeductible);
+    var deductibleVat = effectiveDeductible ? vat : 0;
     var recognized;
-    if (accountingBasis === 'supply_basis') {
+    if (taxpayerType === 'exempt') {
+      // 면세사업자는 매입세액 공제·환급이 불가하므로 VAT 포함 현금 지출액 전액을 원가·필요경비로 산입
+      recognized = cash;
+    } else if (accountingBasis === 'supply_basis') {
       // 적격증빙 매입세액 공제가 가능한 비용만 공급가액 기준(부가세 제외), 불공제 비용은 부가세 포함 전액 비용 처리
-      recognized = vatDeductible ? supply : cash;
+      recognized = effectiveDeductible ? supply : cash;
     } else {
       recognized = cash;
     }
@@ -306,7 +310,7 @@
       vat: vat,
       deductibleVat: deductibleVat,
       vatIncluded: vatIncluded,
-      vatDeductible: vatDeductible,
+      vatDeductible: effectiveDeductible,
       recognized: recognized
     };
   }
@@ -392,8 +396,11 @@
         (feeVat.vatDeductible ? feeVat.cash : 0) +
         (shipVat.vatDeductible ? shipVat.cash : 0) +
         (adVat.vatDeductible ? adVat.cash : 0);
-      var simplifiedCredit = qualifiedCashTotal * creditRate;
+      var rawSimplifiedCredit = qualifiedCashTotal * creditRate;
+      var simplifiedCredit = Math.min(simplifiedGrossVat, rawSimplifiedCredit);
       var simplifiedNetVat = Math.max(0, simplifiedGrossVat - simplifiedCredit);
+      var simpCardCredit = Math.min(simplifiedNetVat, revVat.cash * 0.013);
+      var simpNetAfterCard = Math.max(0, simplifiedNetVat - simpCardCredit);
 
       return {
         taxpayerType: 'simplified',
@@ -402,6 +409,8 @@
         outputVat: simplifiedGrossVat,
         deductibleInputVat: simplifiedCredit,
         estimatedVatPayable: simplifiedNetVat,
+        cardIssuanceCredit: simpCardCredit,
+        netVatAfterCardCredit: simpNetAfterCard,
         displayAmount: formatCurrency(simplifiedNetVat),
         assumptions: [
           t(
@@ -409,8 +418,12 @@
             'Applied Basis: Gross Revenue × 10% × Industry Value-Added Rate (' + inp.simplifiedValueAddedRate + '%)'
           ),
           t(
-            '공제 기준: 적격증빙 공제 가능 항목(' + (deductibleNames.length ? deductibleNames.join(', ') : '없음') + ') 매입대가 × ' + inp.simplifiedInputCreditRate + '% (환급 불가)',
+            '공제 기준: 적격증빙 공제 가능 항목(' + (deductibleNames.length ? deductibleNames.join(', ') : '없음') + ') 매입대가 × ' + inp.simplifiedInputCreditRate + '% (매출세액 한도 내 비환급)',
             'Credit Basis: Qualified items (' + (deductibleNames.length ? deductibleNames.join(', ') : 'None') + ') × ' + inp.simplifiedInputCreditRate + '% (Non-refundable)'
+          ),
+          t(
+            '참고(부가가치세법 제46조): 카드·PG 매출 1.3%(연 1,000만원 한도) 발행세액공제 최대 ' + formatCurrency(simpCardCredit) + ' 반영 시 예상 납부세액 ' + formatCurrency(simpNetAfterCard),
+            'Ref (Art. 46): With 1.3% card/PG tax credit up to ' + formatCurrency(simpCardCredit) + ', est. VAT drops to ' + formatCurrency(simpNetAfterCard)
           ),
           t(
             '불공제 처리 항목: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : '없음'),
@@ -418,8 +431,8 @@
           )
         ],
         excludedNote: t(
-          '간이과세자 부가가치세 납부의무 면제 기준(직전 연도 공급대가 기준) 및 전자세금계산서 발급 의무 여부는 연간 매출에 따라 달라지므로 제외되었습니다.',
-          'Annual VAT payment exemption thresholds and e-invoice obligations depend on annual turnover and are excluded.'
+          '2024.7.1. 시행 기준 간이과세 적용(연 1억 400만 원 미만) 및 납부의무 면제(연 4,800만 원 미만) 여부는 [세무·과세 진단기]에서 연간 매출 기준으로 판정할 수 있습니다.',
+          'Annual simplified eligibility (<104M KRW) and payment exemption (<48M KRW) can be evaluated in the Korean Tax Guide.'
         )
       };
     }
@@ -432,6 +445,8 @@
       shipVat.deductibleVat +
       adVat.deductibleVat;
     var estimatedVatPayable = outputVat - deductibleInputVat;
+    var generalCardCredit = estimatedVatPayable > 0 ? Math.min(estimatedVatPayable, revVat.cash * 0.013) : 0;
+    var generalNetAfterCard = estimatedVatPayable > 0 ? Math.max(0, estimatedVatPayable - generalCardCredit) : estimatedVatPayable;
 
     return {
       taxpayerType: 'general',
@@ -440,6 +455,8 @@
       outputVat: outputVat,
       deductibleInputVat: deductibleInputVat,
       estimatedVatPayable: estimatedVatPayable,
+      cardIssuanceCredit: generalCardCredit,
+      netVatAfterCardCredit: generalNetAfterCard,
       displayAmount:
         estimatedVatPayable >= 0
           ? formatCurrency(estimatedVatPayable) + t(' (납부 예상)', ' (Est. Payable)')
@@ -454,13 +471,17 @@
           'Credited Input VAT items: ' + (deductibleNames.length ? deductibleNames.join(', ') : 'None')
         ),
         t(
+          '참고(부가가치세법 제46조): 개인사업자 카드·PG 매출 1.3%(연 1,000만원 한도) 발행세액공제 최대 ' + formatCurrency(generalCardCredit) + ' 적용 시 ' + formatCurrency(Math.max(0, generalNetAfterCard)),
+          'Ref (Art. 46): Sole proprietors with <=1B KRW prior-year supply receive 1.3% card credit up to ' + formatCurrency(generalCardCredit)
+        ),
+        t(
           '매입세액 공제 제외(불공제) 항목: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : '없음'),
           'Non-deductible items: ' + (nonDeductibleNames.length ? nonDeductibleNames.join(', ') : 'None')
         )
       ],
       excludedNote: t(
-        '신용카드 매출전표 발행세액공제, 의제매입세액공제, 종합소득세·법인세, 4대 보험 및 고정 인건비는 본 건당 계산에서 제외되며 실제 세무 신고 결과와 다를 수 있습니다.',
-        'Card sales tax credits, deemed input credits, corporate/income taxes, and fixed payroll are excluded; actual filings may differ.'
+        '종합소득세, 4대 보험, 연 매출 10억 원 초과 사업자의 카드발행세액공제 제외 여부는 [세무·과세 진단기] 메뉴에서 통합 진단할 수 있습니다.',
+        'Comprehensive income tax and the 1B KRW card credit cap are evaluated in the Korean Tax Guide page.'
       )
     };
   }
@@ -511,22 +532,49 @@
     var feeTotalInput = feeProduct + feeShipping;
     var totalGrossRevenueInput = sellerProductRevenue + inp.customerShipping;
 
-    // 3. VAT 분리 (현금 기준 vs 공급가액 손익 기준)
+    // 3. VAT 분리 (현금 기준 vs 공급가액/간이과세/면세 세법 반영 손익 기준)
     var revVat = splitVatRevenue(totalGrossRevenueInput, inp.revenueVatIncluded, inp.accountingBasis, inp.taxpayerType);
-    var feeVat = splitVatCost(feeTotalInput, inp.feeVatIncluded, inp.feeVatDeductible, inp.accountingBasis);
-    var cogsVat = splitVatCost(inp.cogs, inp.cogsVatIncluded, inp.cogsVatDeductible, inp.accountingBasis);
-    var shipVat = splitVatCost(inp.sellerShippingCost, inp.shippingVatIncluded, inp.shippingVatDeductible, inp.accountingBasis);
-    var adVat = splitVatCost(inp.adSpend, inp.adVatIncluded, inp.adVatDeductible, inp.accountingBasis);
+    var feeVat = splitVatCost(feeTotalInput, inp.feeVatIncluded, inp.feeVatDeductible, inp.accountingBasis, inp.taxpayerType);
+    var cogsVat = splitVatCost(inp.cogs, inp.cogsVatIncluded, inp.cogsVatDeductible, inp.accountingBasis, inp.taxpayerType);
+    var shipVat = splitVatCost(inp.sellerShippingCost, inp.shippingVatIncluded, inp.shippingVatDeductible, inp.accountingBasis, inp.taxpayerType);
+    var adVat = splitVatCost(inp.adSpend, inp.adVatIncluded, inp.adVatDeductible, inp.accountingBasis, inp.taxpayerType);
 
     // 4. 1단계: 플랫폼 정산 예정액 (실제 통장 입금 예정액, VAT 포함 현금 정산 기준)
     var platformSettlement = revVat.cash - feeVat.cash;
 
-    // 5. 2단계: 선택된 회계 기준에 따른 공헌이익(C) 및 최종 영업 추정 이익
+    // 5. 2단계: 선택된 회계·과세 기준에 따른 공헌이익(C) 및 최종 영업 추정 이익
     var recognizedRevenue = revVat.recognized;
     var recognizedFee = feeVat.recognized;
     var recognizedCogs = cogsVat.recognized;
     var recognizedShipping = shipVat.recognized;
     var recognizedAdSpend = adVat.recognized;
+
+    if (inp.taxpayerType === 'simplified' && inp.accountingBasis === 'supply_basis') {
+      if (inp.simplifiedValueAddedRate !== null && inp.simplifiedValueAddedRate > 0) {
+        // 간이과세자 실효 세법 반영: 매출세액(공급대가 × 업종부가가치율 × 10%), 매입공제(적격증빙 매입대가 × 공제율, 비환급)
+        var simpOutVat = revVat.cash * VAT_RATE * (inp.simplifiedValueAddedRate / 100);
+        var simpCreditRate = inp.simplifiedInputCreditRate / 100;
+        var rawFeeCr = feeVat.vatDeductible ? feeVat.cash * simpCreditRate : 0;
+        var rawCogsCr = cogsVat.vatDeductible ? cogsVat.cash * simpCreditRate : 0;
+        var rawShipCr = shipVat.vatDeductible ? shipVat.cash * simpCreditRate : 0;
+        var rawAdCr = adVat.vatDeductible ? adVat.cash * simpCreditRate : 0;
+        var totalRawCr = rawFeeCr + rawCogsCr + rawShipCr + rawAdCr;
+        var crScale = totalRawCr > EPSILON ? Math.min(1, simpOutVat / totalRawCr) : 0;
+
+        recognizedRevenue = revVat.cash - simpOutVat;
+        recognizedFee = feeVat.cash - rawFeeCr * crScale;
+        recognizedCogs = cogsVat.cash - rawCogsCr * crScale;
+        recognizedShipping = shipVat.cash - rawShipCr * crScale;
+        recognizedAdSpend = adVat.cash - rawAdCr * crScale;
+      } else {
+        // 간이과세 부가가치율 미선택 시에는 현금 지출액(VAT 포함)과 동일하게 유지
+        recognizedRevenue = revVat.cash;
+        recognizedFee = feeVat.cash;
+        recognizedCogs = cogsVat.cash;
+        recognizedShipping = shipVat.cash;
+        recognizedAdSpend = adVat.cash;
+      }
+    }
 
     var contributionMargin = recognizedRevenue - recognizedCogs - recognizedFee - recognizedShipping;
     var operatingProfit = contributionMargin - recognizedAdSpend;
@@ -1662,6 +1710,7 @@
     '순이익·정산 계산기': 'Profit & Settlement',
     '손익분기 ROAS': 'Break-Even ROAS',
     '판매가 역산기': 'Price Calculator',
+    '세무·과세 진단기': 'Tax & Filing Guide',
     '약관·개인정보·면책': 'Legal & Privacy',
     '순이익 계산기': 'Profit Calculator',
     'ROAS 계산기': 'ROAS Calculator',
@@ -1717,6 +1766,11 @@
     '건설업·부동산임대 (25%)': 'Construction / Real Estate Rental (25%)',
     '음식점업·숙박업·운수창고통신 (30%)': 'F&B / Lodging / Logistics & Telecom (30%)',
     '기타 서비스업 (40%)': 'Other Services (40%)',
+    '소매업(전자상거래)·음식점업·재생용 재료수집 (15%)': 'E-Commerce / Retail / Restaurants (15%)',
+    '제조업(최종소비자 상대)·농임어업·소화물운송 (20%)': 'B2C Manufacturing / Agriculture / Parcel Delivery (20%)',
+    '숙박업 (25%)': 'Lodging & Hospitality (25%)',
+    '건설업·운수창고업·정보통신업 (30%)': 'Construction / Logistics & Warehousing / IT (30%)',
+    '부동산임대업·전문과학기술·사업지원·기타서비스 (40%)': 'Real Estate Rental / Professional & Other Services (40%)',
     '세금계산서 매입 공제율 (%)': 'Tax Invoice Credit Rate (%)',
     '항목': 'Item',
     'VAT(10%) 포함 입력': 'Entered Incl. 10% VAT',
@@ -3064,11 +3118,678 @@
     };
   }
 
+  /* ==========================================================================
+     대한민국 현행 세법(부가가치세법·소득세법) 통합 과세유형·세액·신고 진단 엔진
+     ========================================================================== */
+
+  var VAT_SIMPLIFIED_THRESHOLD = 104000000; // 1억 400만 원 미만 (2024.7.1. 시행 부가가치세법 제61조·시행령 제109조)
+  var VAT_EXEMPT_PAYMENT_THRESHOLD = 48000000; // 4,800만 원 미만 (부가가치세법 제69조 간이과세자 납부의무 면제 기준)
+  var CARD_ISSUANCE_CREDIT_RATE = 0.013; // 신용카드매출전표 등 발행세액공제 1.3% (부가가치세법 제46조)
+  var CARD_ISSUANCE_CREDIT_CAP = 10000000; // 연 1,000만 원 한도
+  var CARD_CREDIT_PRIOR_SUPPLY_LIMIT = 1000000000; // 직전 연도 과세공급가액 10억 원 이하 개인사업자 적용
+
+  var KOREAN_INCOME_TAX_BRACKETS = [
+    { min: 0, max: 14000000, rate: 0.06, deduction: 0, labelKo: '1,400만 원 이하', labelEn: 'Up to 14M KRW' },
+    { min: 14000000, max: 50000000, rate: 0.15, deduction: 1260000, labelKo: '1,400만 원 초과 ~ 5,000만 원 이하', labelEn: '14M ~ 50M KRW' },
+    { min: 50000000, max: 88000000, rate: 0.24, deduction: 5760000, labelKo: '5,000만 원 초과 ~ 8,800만 원 이하', labelEn: '50M ~ 88M KRW' },
+    { min: 88000000, max: 150000000, rate: 0.35, deduction: 15440000, labelKo: '8,800만 원 초과 ~ 1억 5,000만 원 이하', labelEn: '88M ~ 150M KRW' },
+    { min: 150000000, max: 300000000, rate: 0.38, deduction: 19940000, labelKo: '1억 5,000만 원 초과 ~ 3억 원 이하', labelEn: '150M ~ 300M KRW' },
+    { min: 300000000, max: 500000000, rate: 0.40, deduction: 25940000, labelKo: '3억 원 초과 ~ 5억 원 이하', labelEn: '300M ~ 500M KRW' },
+    { min: 500000000, max: 1000000000, rate: 0.42, deduction: 35940000, labelKo: '5억 원 초과 ~ 10억 원 이하', labelEn: '500M ~ 1B KRW' },
+    { min: 1000000000, max: Infinity, rate: 0.45, deduction: 65940000, labelKo: '10억 원 초과', labelEn: 'Over 1B KRW' }
+  ];
+
+  var INDUSTRY_TAX_SPECS = {
+    retail_ecommerce: {
+      key: 'retail_ecommerce',
+      nameKo: '전자상거래 · 소매업 (통신판매업)',
+      nameEn: 'E-Commerce / Retail',
+      forcedType: null,
+      vatRatePct: 15,
+      doubleEntryLimit: 300000000,
+      simpleExpenseContLimit: 60000000,
+      sincereFilingLimit: 1500000000,
+      simpleRateBase: 0.86,
+      simpleRateExcess: 0.80,
+      standardRate: 0.111
+    },
+    food: {
+      key: 'food',
+      nameKo: '음식점업 · 카페',
+      nameEn: 'Restaurants & Cafe',
+      forcedType: null,
+      vatRatePct: 15,
+      doubleEntryLimit: 150000000,
+      simpleExpenseContLimit: 36000000,
+      sincereFilingLimit: 750000000,
+      simpleRateBase: 0.897,
+      simpleRateExcess: 0.867,
+      standardRate: 0.114
+    },
+    manufacturing_b2c: {
+      key: 'manufacturing_b2c',
+      nameKo: '제조업 (최종소비자 직접 판매)',
+      nameEn: 'B2C Manufacturing',
+      forcedType: null,
+      vatRatePct: 20,
+      doubleEntryLimit: 150000000,
+      simpleExpenseContLimit: 36000000,
+      sincereFilingLimit: 750000000,
+      simpleRateBase: 0.889,
+      simpleRateExcess: 0.862,
+      standardRate: 0.134
+    },
+    service_it: {
+      key: 'service_it',
+      nameKo: '정보통신 · 마케팅 · 일반 서비스업',
+      nameEn: 'IT / Marketing / Services',
+      forcedType: null,
+      vatRatePct: 30,
+      doubleEntryLimit: 75000000,
+      simpleExpenseContLimit: 24000000,
+      sincereFilingLimit: 500000000,
+      simpleRateBase: 0.641,
+      simpleRateExcess: 0.541,
+      standardRate: 0.172
+    },
+    wholesale_excluded: {
+      key: 'wholesale_excluded',
+      nameKo: '도매업 · 상품중개업 (간이과세 배제)',
+      nameEn: 'Wholesale / Brokerage (Simplified Excluded)',
+      forcedType: 'general',
+      vatRatePct: 15,
+      doubleEntryLimit: 300000000,
+      simpleExpenseContLimit: 60000000,
+      sincereFilingLimit: 1500000000,
+      simpleRateBase: 0.902,
+      simpleRateExcess: 0.840,
+      standardRate: 0.086
+    },
+    exempt_goods: {
+      key: 'exempt_goods',
+      nameKo: '면세재화 (미가공 농축수산물·도서·출판)',
+      nameEn: 'VAT-Exempt Goods (Unprocessed Food / Books)',
+      forcedType: 'exempt',
+      vatRatePct: 0,
+      doubleEntryLimit: 300000000,
+      simpleExpenseContLimit: 60000000,
+      sincereFilingLimit: 1500000000,
+      simpleRateBase: 0.880,
+      simpleRateExcess: 0.820,
+      standardRate: 0.105
+    }
+  };
+
+  function resolveIncomeTaxBracket(taxBase) {
+    var cleanBase = Math.max(0, taxBase);
+    for (var i = 0; i < KOREAN_INCOME_TAX_BRACKETS.length; i++) {
+      var b = KOREAN_INCOME_TAX_BRACKETS[i];
+      if (cleanBase <= b.max) {
+        return { index: i, bracket: b };
+      }
+    }
+    return {
+      index: KOREAN_INCOME_TAX_BRACKETS.length - 1,
+      bracket: KOREAN_INCOME_TAX_BRACKETS[KOREAN_INCOME_TAX_BRACKETS.length - 1]
+    };
+  }
+
+  function computeProgressiveIncomeTax(businessIncome, opt) {
+    var dependents = Math.max(1, Math.round(opt.dependentsCount || 1));
+    var personalDeduction = dependents * 1500000;
+    var extraDeduction = Math.max(0, opt.extraDeduction || 0);
+    var taxBase = Math.max(0, businessIncome - personalDeduction - extraDeduction);
+
+    var resolved = resolveIncomeTaxBracket(taxBase);
+    var br = resolved.bracket;
+    var calculatedTax = businessIncome > 0 && taxBase > 0 ? Math.max(0, taxBase * br.rate - br.deduction) : 0;
+
+    var bookkeepingCredit = 0;
+    if (opt.applyDoubleCredit && calculatedTax > 0) {
+      bookkeepingCredit = Math.min(1000000, Math.round(calculatedTax * 0.2));
+    }
+    var remAfterBook = Math.max(0, calculatedTax - bookkeepingCredit);
+    var standardCredit = businessIncome > 0 && calculatedTax > 0 ? Math.min(remAfterBook, 70000) : 0;
+    var remAfterStd = Math.max(0, remAfterBook - standardCredit);
+    var eFilingCredit = opt.includeEFilingCredit && remAfterStd > 0 ? Math.min(remAfterStd, 20000) : 0;
+
+    var determinedIncomeTax = Math.max(0, Math.round(remAfterStd - eFilingCredit));
+    var localIncomeTax = Math.floor((determinedIncomeTax * 0.1) / 10) * 10;
+
+    return {
+      businessIncome: businessIncome,
+      personalDeduction: personalDeduction,
+      extraDeduction: extraDeduction,
+      taxBase: taxBase,
+      bracketIndex: resolved.index,
+      bracketRate: br.rate * 100,
+      bracketLabel: currentLang === 'en' ? br.labelEn : br.labelKo,
+      progressiveDeduction: br.deduction,
+      calculatedTax: Math.round(calculatedTax),
+      bookkeepingCredit: bookkeepingCredit,
+      standardCredit: Math.round(standardCredit),
+      eFilingCredit: Math.round(eFilingCredit),
+      determinedIncomeTax: determinedIncomeTax,
+      localIncomeTax: localIncomeTax,
+      totalIncomeTax: determinedIncomeTax + localIncomeTax,
+      hasLoss: businessIncome < 0,
+      carryforwardLoss: businessIncome < 0 ? Math.abs(Math.round(businessIncome)) : 0
+    };
+  }
+
+  function calculateKoreanTax(rawTaxInputs) {
+    var src = rawTaxInputs && typeof rawTaxInputs === 'object' ? rawTaxInputs : {};
+    var validPeriodModes = ['annual', 'monthly', 'half_year', 'quarterly'];
+    var periodMode = validPeriodModes.indexOf(src.periodMode) !== -1 ? src.periodMode : 'annual';
+    var multiplierMap = { annual: 1, monthly: 12, half_year: 2, quarterly: 4 };
+    var periodMultiplier = multiplierMap[periodMode];
+
+    var industryKey = Object.prototype.hasOwnProperty.call(INDUSTRY_TAX_SPECS, src.industryKey) ? src.industryKey : 'retail_ecommerce';
+    var spec = INDUSTRY_TAX_SPECS[industryKey];
+
+    var validOverrides = ['auto', 'general', 'simplified', 'exempt'];
+    var taxpayerOverride = validOverrides.indexOf(src.taxpayerOverride) !== -1 ? src.taxpayerOverride : 'auto';
+    var isNewBusiness = toBoolean(src.isNewBusiness, false);
+
+    var priorYearGrossSales = null;
+    if (src.priorYearGrossSales !== null && src.priorYearGrossSales !== '' && typeof src.priorYearGrossSales !== 'undefined') {
+      var pVal = Number(src.priorYearGrossSales);
+      if (Number.isFinite(pVal) && pVal >= 0) {
+        priorYearGrossSales = pVal;
+      }
+    }
+
+    var grossSalesInput = toNonNegativeNumber(src.grossSales, 0);
+    var cogsInput = toNonNegativeNumber(src.cogsTotal, 0);
+    var feeInput = toNonNegativeNumber(src.platformFeeTotal, 0);
+    var shipInput = toNonNegativeNumber(src.shippingCostTotal, 0);
+    var adInput = toNonNegativeNumber(src.adSpendTotal, 0);
+    var otherInput = toNonNegativeNumber(src.otherExpenseTotal, 0);
+
+    var cardSalesRatio = Math.min(100, toNonNegativeNumber(src.cardSalesRatio, 95));
+    var nonQualifiedExpenseRatio = Math.min(100, toNonNegativeNumber(src.nonQualifiedExpenseRatio, 0));
+    var dependentsCount = Math.max(1, Math.min(20, Math.round(toNonNegativeNumber(src.dependentsCount, 1))));
+    var extraDeduction = toNonNegativeNumber(src.extraDeduction, 0);
+    var useDoubleEntryCredit = toBoolean(src.useDoubleEntryCredit, false);
+    var includeEFilingCredit = toBoolean(src.includeEFilingCredit, true);
+
+    var normalizedInputs = {
+      periodMode: periodMode,
+      periodMultiplier: periodMultiplier,
+      industryKey: industryKey,
+      taxpayerOverride: taxpayerOverride,
+      isNewBusiness: isNewBusiness,
+      priorYearGrossSales: priorYearGrossSales,
+      grossSales: grossSalesInput,
+      cogsTotal: cogsInput,
+      platformFeeTotal: feeInput,
+      shippingCostTotal: shipInput,
+      adSpendTotal: adInput,
+      otherExpenseTotal: otherInput,
+      cardSalesRatio: cardSalesRatio,
+      nonQualifiedExpenseRatio: nonQualifiedExpenseRatio,
+      dependentsCount: dependentsCount,
+      extraDeduction: extraDeduction,
+      useDoubleEntryCredit: useDoubleEntryCredit,
+      includeEFilingCredit: includeEFilingCredit
+    };
+
+    var annualGrossSales = grossSalesInput * periodMultiplier;
+    var annualCogs = cogsInput * periodMultiplier;
+    var annualFee = feeInput * periodMultiplier;
+    var annualShip = shipInput * periodMultiplier;
+    var annualAd = adInput * periodMultiplier;
+    var annualOther = otherInput * periodMultiplier;
+    var totalCashCosts = annualCogs + annualFee + annualShip + annualAd + annualOther;
+    var preTaxCashProfit = annualGrossSales - totalCashCosts;
+
+    var annualized = {
+      grossSales: annualGrossSales,
+      cogsTotal: annualCogs,
+      platformFeeTotal: annualFee,
+      shippingCostTotal: annualShip,
+      adSpendTotal: annualAd,
+      otherExpenseTotal: annualOther,
+      totalCashCosts: totalCashCosts,
+      preTaxCashProfit: preTaxCashProfit
+    };
+
+    // 1. 과세유형 판정 (현행 부가가치세법 제26조, 제61조, 제69조, 시행령 제109조)
+    var basisSalesForVat = isNewBusiness ? 0 : priorYearGrossSales !== null ? priorYearGrossSales : annualGrossSales;
+    var determinedType = 'simplified_taxable';
+    var taxpayerType = 'simplified';
+    var legalBasis = '';
+    var title = '';
+    var subtitle = '';
+    var invoiceDutyText = '';
+    var conversionAlertText = '';
+
+    if (spec.forcedType === 'exempt' || taxpayerOverride === 'exempt') {
+      determinedType = 'exempt';
+      taxpayerType = 'exempt';
+      title = t('면세사업자 (부가가치세 면세 · 종합소득세 과세)', 'VAT-Exempt Business (Income Tax Subject)');
+      subtitle = t(
+        '부가가치세 신고·납부는 면제되지만, 매년 2월 면세사업자 사업장현황신고와 5월 종합소득세 신고는 반드시 해야 합니다.',
+        'Exempt from VAT filing/payment, but annual Business Status Report (Feb) and Income Tax Return (May) are mandatory.'
+      );
+      legalBasis = t('부가가치세법 제26조(면세) · 소득세법 제78조(사업장현황신고)', 'VAT Act Art. 26 · Income Tax Act Art. 78');
+      invoiceDutyText = t('부가가치세 세금계산서 대신 [계산서] 또는 신용카드·현금영수증 발급 (매입 부가세 공제 불가·전액 경비 인정)', 'Issues VAT-free Invoices; Input VAT is non-creditable and fully treated as deductible cost');
+      conversionAlertText = t('과세 재화(가공식품·일반 공산품 등)를 함께 판매하면 과세·면세 겸영사업자로 전환되므로 구분 기장이 필요합니다.', 'Selling taxable goods alongside exempt goods triggers mixed-taxpayer status requiring separate books.');
+    } else if (spec.forcedType === 'general' || taxpayerOverride === 'general' || (!isNewBusiness && taxpayerOverride === 'auto' && basisSalesForVat >= VAT_SIMPLIFIED_THRESHOLD)) {
+      determinedType = 'general';
+      taxpayerType = 'general';
+      title = t('일반과세자 (부가세 10% 정식 과세 · 매입세액 전액 공제/환급)', 'General Taxpayer (10% VAT · Full Input Credit & Refund)');
+      if (spec.forcedType === 'general') {
+        subtitle = t('선택하신 업종(도매·중개 등)은 매출액과 무관하게 부가가치세법상 간이과세 배제 업종이므로 일반과세자가 적용됩니다.', 'Selected industry is statutorily excluded from simplified VAT regardless of turnover.');
+      } else if (taxpayerOverride === 'general') {
+        subtitle = t('일반과세자 기준이 선택되었습니다. 매출의 10% 부가세를 납부하되, 세금계산서·사업용카드 매입 부가세 10%를 전액 공제·환급받습니다.', 'General VAT selected: collect 10% output VAT and claim full 10% qualified input VAT credits/refunds.');
+      } else {
+        subtitle = t(
+          '연환산 공급대가(' + formatCurrency(basisSalesForVat) + ')가 1억 400만 원 이상이므로 일반과세 과세대상입니다.',
+          'Annual gross revenue (' + formatCurrency(basisSalesForVat) + ') meets or exceeds 104M KRW general VAT threshold.'
+        );
+      }
+      legalBasis = t('부가가치세법 제30조(10% 세율) · 제61조(간이과세 기준 1억 400만 원) · 제46조(카드발행공제 1.3%)', 'VAT Act Art. 30 (10%) · Art. 61 (104M Threshold) · Art. 46 (1.3% Card Credit)');
+      invoiceDutyText = t('세금계산서 발급 의무자 (일반 소비자 판매는 마켓 PG·카드·현금영수증 자동 발행)', 'Tax invoice issuance required for B2B; PG/card receipts cover B2C sales');
+      conversionAlertText =
+        annualGrossSales < VAT_SIMPLIFIED_THRESHOLD && spec.forcedType !== 'general'
+          ? t('당해 연도 매출이 1억 400만 원 미만으로 유지되면 다음 해 7월 1일부터 간이과세 전환 통지 대상이 될 수 있습니다(초기 매입 많을 시 일반 유지 유리).', 'If turnover stays under 104M KRW, you may qualify to switch to Simplified next July 1 (unless initial input VAT refund is beneficial).')
+          : t('1월(2기)·7월(1기) 연 2회 부가세 확정신고 및 4월·10월 예정고지/신고 일정이 적용됩니다.', 'Two final VAT filings per year (Jan & Jul) plus Apr/Oct interim assessments.');
+    } else {
+      taxpayerType = 'simplified';
+      var isExemptPayment = annualGrossSales < VAT_EXEMPT_PAYMENT_THRESHOLD;
+      determinedType = isExemptPayment ? 'simplified_exempt' : 'simplified_taxable';
+      if (isExemptPayment) {
+        title = t('간이과세자 — 부가가치세 납부의무 면제 (0원) 대상', 'Simplified Taxpayer — VAT Payment Exempt (<48M KRW)');
+        subtitle = t(
+          '연 매출이 4,800만 원 미만(' + formatCurrency(annualGrossSales) + ')으로 부가가치세 납부가 면제(0원)됩니다. 단, 1월 부가세 신고와 5월 종합소득세 신고는 반드시 진행해야 합니다.',
+          'Annual revenue is under 48M KRW (' + formatCurrency(annualGrossSales) + '): VAT payment is exempt (0 KRW), though annual Jan VAT filing and May Income Tax filing are still required.'
+        );
+      } else {
+        title = t(
+          '간이과세자 — 부가세 낮게 납부(업종부가율 ' + spec.vatRatePct + '% · 실효세율 ' + (spec.vatRatePct * 0.1).toFixed(1) + '%) 대상',
+          'Simplified Taxpayer — Reduced VAT (' + spec.vatRatePct + '% Value-Added Rate = ' + (spec.vatRatePct * 0.1).toFixed(1) + '% Effective)'
+        );
+        subtitle = t(
+          '연환산 매출이 4,800만 원 이상 ~ 1억 400만 원 미만 구간으로 간이과세 세율이 적용되며, 카드·PG 매출 1.3% 발행세액공제로 실제 부가세 부담이 크게 줄어듭니다.',
+          'Between 48M and 104M KRW: reduced simplified VAT applies, further offset by the 1.3% card/PG tax credit.'
+        );
+      }
+      legalBasis = t('부가가치세법 제61조(1억 400만 원) · 제63조(업종별 부가가치율 및 0.5% 매입공제) · 제69조(4,800만 원 납부면제)', 'VAT Act Art. 61 (104M Limit) · Art. 63 (Industry Rate & 0.5% Credit) · Art. 69 (48M Exemption)');
+      invoiceDutyText = isExemptPayment
+        ? t('연 매출 4,800만 원 미만 간이과세자는 세금계산서 발급 불가 (현금영수증·영수증·PG결제 처리, B2B 거래처 주의)', 'Cannot issue tax invoices below 48M KRW (issues receipts/cash receipts only)')
+        : t('직전 연도 매출 4,800만 원 이상 간이과세자는 B2B 요청 시 세금계산서 발급 의무 있음 (미발급 가산세 주의)', '48M~104M KRW simplified taxpayers MUST issue tax invoices when requested by B2B buyers');
+      if (annualGrossSales >= VAT_SIMPLIFIED_THRESHOLD) {
+        conversionAlertText = t(
+          '주의: 당해 연환산 매출(' + formatCurrency(annualGrossSales) + ')이 1억 400만 원을 넘었으므로 내년 7월 1일부터 일반과세자(10%)로 자동 전환됩니다!',
+          'Alert: Current annualized sales (' + formatCurrency(annualGrossSales) + ') exceed 104M KRW — automatic conversion to General Taxpayer takes effect next July 1!'
+        );
+      } else {
+        conversionAlertText = t(
+          '매년 1월 1일~25일 1년에 한 번만 부가세를 신고하며, 환급은 불가하지만 매출 부가세율이 일반과세(10%) 대비 매우 낮습니다.',
+          'Files VAT once a year (Jan 1–25). Non-refundable, with significantly lower effective VAT than General.'
+        );
+      }
+    }
+
+    // 2. 부가가치세 비교 계산 (일반과세 vs 간이과세 동일 조건 대조)
+    var qualifiedRatio = 1 - nonQualifiedExpenseRatio / 100;
+    var qualifiedCosts = totalCashCosts * qualifiedRatio;
+    var cardRatio = cardSalesRatio / 100;
+    var priorSupplyForCard = basisSalesForVat / 1.1;
+    var cardCreditEligibleOwner = priorSupplyForCard <= CARD_CREDIT_PRIOR_SUPPLY_LIMIT;
+
+    // 일반과세 기준 부가세
+    var gOutputVat = Math.round(annualGrossSales / 11);
+    var gInputVat = Math.round(qualifiedCosts / 11);
+    var gBeforeCredit = gOutputVat - gInputVat;
+    var gRawCard = cardCreditEligibleOwner ? Math.min(CARD_ISSUANCE_CREDIT_CAP, Math.round(annualGrossSales * cardRatio * CARD_ISSUANCE_CREDIT_RATE)) : 0;
+    var gCardCredit = gBeforeCredit > 0 ? Math.min(gBeforeCredit, gRawCard) : 0;
+    var gAfterCard = gBeforeCredit - gCardCredit;
+    var gEFiling = includeEFilingCredit && gAfterCard > 0 ? Math.min(gAfterCard, 20000) : 0;
+    var gFinalVat = gAfterCard - gEFiling;
+
+    // 간이과세 기준 부가세
+    var sOutputVat = Math.round(annualGrossSales * 0.1 * (spec.vatRatePct / 100));
+    var sRawInputCredit = Math.round(qualifiedCosts * 0.005);
+    var sInputCredit = Math.min(sOutputVat, sRawInputCredit);
+    var sBeforeCredit = Math.max(0, sOutputVat - sInputCredit);
+    var sExemptApplied = taxpayerType === 'simplified' && determinedType === 'simplified_exempt';
+    var sCardCredit = 0;
+    var sEFiling = 0;
+    var sFinalVat = 0;
+    if (!sExemptApplied) {
+      var sRawCard = cardCreditEligibleOwner ? Math.min(CARD_ISSUANCE_CREDIT_CAP, Math.round(annualGrossSales * cardRatio * CARD_ISSUANCE_CREDIT_RATE)) : 0;
+      sCardCredit = Math.min(sBeforeCredit, sRawCard);
+      var sAfterCard = Math.max(0, sBeforeCredit - sCardCredit);
+      sEFiling = includeEFilingCredit && sAfterCard > 0 ? Math.min(sAfterCard, 10000) : 0;
+      sFinalVat = Math.max(0, sAfterCard - sEFiling);
+    }
+
+    var activeVat;
+    if (taxpayerType === 'exempt') {
+      activeVat = {
+        outputVat: 0,
+        inputVatCredit: 0,
+        vatBeforeCredits: 0,
+        cardIssuanceCredit: 0,
+        eFilingCredit: 0,
+        finalAnnualVat: 0,
+        isRefund: false,
+        semiAnnualVat: 0,
+        exemptApplied: false
+      };
+    } else if (taxpayerType === 'general') {
+      activeVat = {
+        outputVat: gOutputVat,
+        inputVatCredit: gInputVat,
+        vatBeforeCredits: gBeforeCredit,
+        cardIssuanceCredit: gCardCredit,
+        eFilingCredit: gEFiling,
+        finalAnnualVat: gFinalVat,
+        isRefund: gFinalVat < 0,
+        semiAnnualVat: Math.round(gFinalVat / 2),
+        exemptApplied: false
+      };
+    } else {
+      activeVat = {
+        outputVat: sOutputVat,
+        inputVatCredit: sInputCredit,
+        vatBeforeCredits: sExemptApplied ? 0 : sBeforeCredit,
+        cardIssuanceCredit: sCardCredit,
+        eFilingCredit: sEFiling,
+        finalAnnualVat: sFinalVat,
+        isRefund: false,
+        semiAnnualVat: sFinalVat,
+        exemptApplied: sExemptApplied
+      };
+    }
+
+    var vatComparisonNote = '';
+    if (taxpayerType === 'exempt') {
+      vatComparisonNote = t('면세사업자는 부가가치세 신고·납부 대상이 아닙니다.', 'VAT-exempt business is excluded from VAT comparison.');
+    } else if (gFinalVat < sFinalVat) {
+      vatComparisonNote = t(
+        '매입 비중이 높거나 초기 투자/적자 구조여서 일반과세(환급 포함 ' + formatCurrency(gFinalVat) + ')가 간이과세(' + formatCurrency(sFinalVat) + ')보다 부가세 ' + formatCurrency(sFinalVat - gFinalVat) + ' 더 유리합니다.',
+        'High input ratio makes General VAT (' + formatCurrency(gFinalVat) + ') cheaper by ' + formatCurrency(sFinalVat - gFinalVat) + ' than Simplified (' + formatCurrency(sFinalVat) + ').'
+      );
+    } else {
+      vatComparisonNote = t(
+        '동일 매출 대비 간이과세(' + formatCurrency(sFinalVat) + ')가 일반과세(' + formatCurrency(gFinalVat) + ')보다 부가세 부담이 ' + formatCurrency(gFinalVat - sFinalVat) + ' 적습니다.',
+        'Simplified VAT (' + formatCurrency(sFinalVat) + ') saves ' + formatCurrency(gFinalVat - sFinalVat) + ' vs General (' + formatCurrency(gFinalVat) + ').'
+      );
+    }
+
+    activeVat.comparison = {
+      generalVat: gFinalVat,
+      simplifiedVat: sFinalVat,
+      simplifiedApplicable: spec.forcedType !== 'general' && annualGrossSales < VAT_SIMPLIFIED_THRESHOLD,
+      note: vatComparisonNote
+    };
+    activeVat.cardCreditEligibleOwner = cardCreditEligibleOwner;
+
+    // 3. 종합소득세 및 기장의무 판정 (현행 소득세법 제55조, 제160조, 시행령 제143조, 제208조)
+    var incomeBasisRev = taxpayerType === 'general' ? Math.round(annualGrossSales / 1.1) : annualGrossSales;
+    var priorRevForIncome = isNewBusiness
+      ? 0
+      : priorYearGrossSales !== null
+      ? taxpayerType === 'general'
+        ? Math.round(priorYearGrossSales / 1.1)
+        : priorYearGrossSales
+      : incomeBasisRev;
+
+    var isDoubleEntry = !isNewBusiness && priorRevForIncome >= spec.doubleEntryLimit;
+    var bookkeepingDuty = isDoubleEntry ? 'double_entry' : 'simple_book';
+    var isSincereFiling = incomeBasisRev >= spec.sincereFilingLimit;
+
+    var expenseRateEligibility = isNewBusiness
+      ? incomeBasisRev < spec.doubleEntryLimit
+        ? 'simple_rate'
+        : 'standard_rate'
+      : priorRevForIncome < spec.simpleExpenseContLimit
+      ? 'simple_rate'
+      : 'standard_rate';
+
+    var nonQualifiedAmount = Math.round(totalCashCosts * (1 - qualifiedRatio));
+    var actualDeductibleExpenses;
+    if (taxpayerType === 'general') {
+      actualDeductibleExpenses = Math.round(qualifiedCosts / 1.1) + nonQualifiedAmount;
+    } else if (taxpayerType === 'simplified') {
+      actualDeductibleExpenses = Math.round(totalCashCosts + activeVat.finalAnnualVat);
+    } else {
+      actualDeductibleExpenses = Math.round(totalCashCosts);
+    }
+
+    var actualBusinessIncome = incomeBasisRev - actualDeductibleExpenses;
+    var actualBook = computeProgressiveIncomeTax(actualBusinessIncome, {
+      dependentsCount: dependentsCount,
+      extraDeduction: extraDeduction,
+      applyDoubleCredit: bookkeepingDuty === 'simple_book' && useDoubleEntryCredit,
+      includeEFilingCredit: includeEFilingCredit
+    });
+    actualBook.revenueSupply = incomeBasisRev;
+    actualBook.deductibleExpenses = actualDeductibleExpenses;
+    actualBook.nonQualifiedAmount = nonQualifiedAmount;
+
+    // 추계신고(단순경비율 vs 기준경비율) 계산
+    var estExpenses = 0;
+    var estMethodLabel = '';
+    var estWarningText = '';
+    if (expenseRateEligibility === 'simple_rate') {
+      estExpenses = Math.round(
+        Math.min(40000000, incomeBasisRev) * spec.simpleRateBase +
+          Math.max(0, incomeBasisRev - 40000000) * spec.simpleRateExcess
+      );
+      estMethodLabel = t(
+        '단순경비율 추계 (' + (spec.simpleRateBase * 100).toFixed(1) + '% / 4천초과 ' + (spec.simpleRateExcess * 100).toFixed(1) + '%)',
+        'Simple Expense Rate (' + (spec.simpleRateBase * 100).toFixed(1) + '%)'
+      );
+      if (!isNewBusiness && priorRevForIncome >= VAT_EXEMPT_PAYMENT_THRESHOLD && bookkeepingDuty === 'simple_book') {
+        estWarningText = t('직전 연도 수입 4,800만 원 이상 사업자가 장부 없이 추계신고 시 무기장가산세(산출세액 20%)가 부과될 수 있습니다.', 'Filing without books above 48M KRW prior income risks a 20% non-bookkeeping penalty.');
+      } else {
+        estWarningText = t('실제 마진율보다 단순경비율(국세청 인정 경비율)이 높으면 추계신고가 유리할 수 있습니다.', 'Simple rate helps when statutory expense rate exceeds your actual cost ratio.');
+      }
+    } else {
+      var majorSupply = taxpayerType === 'general' ? Math.round((annualCogs + annualOther) / 1.1) : annualCogs + annualOther;
+      estExpenses = Math.round(majorSupply + incomeBasisRev * spec.standardRate);
+      estMethodLabel = t(
+        '기준경비율 추계 (주요경비 + 매출 × ' + (spec.standardRate * 100).toFixed(1) + '%)',
+        'Standard Expense Rate (Major Costs + ' + (spec.standardRate * 100).toFixed(1) + '%)'
+      );
+      estWarningText =
+        bookkeepingDuty === 'double_entry'
+          ? t('복식부기의무자는 추계신고 시 무신고가산세(20%) 및 기장불성실 불이익 대상이므로 반드시 복식부기 장부로 신고하세요.', 'Double-entry obligors face 20% penalties if estimating — file using full accounting books.')
+          : t('간편장부대상자라도 직전 4,800만 원 이상이면 기준경비율 선택 시 무기장가산세 20%가 부과될 수 있습니다.', 'Standard-rate estimation may incur a 20% non-bookkeeping penalty if prior income >= 48M KRW.');
+    }
+
+    var estBusinessIncome = Math.max(0, incomeBasisRev - estExpenses);
+    var estimatedRate = computeProgressiveIncomeTax(estBusinessIncome, {
+      dependentsCount: dependentsCount,
+      extraDeduction: extraDeduction,
+      applyDoubleCredit: false,
+      includeEFilingCredit: includeEFilingCredit
+    });
+    estimatedRate.revenueSupply = incomeBasisRev;
+    estimatedRate.recognizedExpenses = estExpenses;
+    estimatedRate.methodLabel = estMethodLabel;
+    estimatedRate.warningText = estWarningText;
+
+    var recommendedMethodText = '';
+    if (bookkeepingDuty === 'double_entry') {
+      recommendedMethodText = t(
+        '복식부기의무자이므로 실제 장부기장 신고가 법적 필수입니다. 세무대리인 기장 또는 복식부기 프로그램 신고를 권장합니다.',
+        'Double-entry bookkeeping is legally mandatory; file with actual accounting books.'
+      );
+    } else if (actualBook.totalIncomeTax <= estimatedRate.totalIncomeTax) {
+      recommendedMethodText = t(
+        '실제 장부기장(간편장부/복식기장) 신고가 추계신고보다 총 소득세를 ' +
+          formatCurrency(estimatedRate.totalIncomeTax - actualBook.totalIncomeTax) +
+          ' 더 절약합니다.' +
+          (actualBook.hasLoss ? ' (적자 발생 시 이월결손금 15년 공제 가능!)' : ''),
+        'Actual Bookkeeping saves ' + formatCurrency(estimatedRate.totalIncomeTax - actualBook.totalIncomeTax) + ' over estimated expense filing.'
+      );
+    } else if (expenseRateEligibility === 'simple_rate' && (isNewBusiness || priorRevForIncome < VAT_EXEMPT_PAYMENT_THRESHOLD)) {
+      recommendedMethodText = t(
+        '단순경비율(' + estMethodLabel + ') 추계신고가 실제 장부보다 ' +
+          formatCurrency(actualBook.totalIncomeTax - estimatedRate.totalIncomeTax) +
+          ' 유리할 수 있습니다. (단, 실제 적자·이월결손 공제 필요 시 장부기장 선택)',
+        'Simple Expense Rate saves ' + formatCurrency(actualBook.totalIncomeTax - estimatedRate.totalIncomeTax) + ' vs actual books.'
+      );
+    } else {
+      recommendedMethodText = t(
+        '무기장가산세(20%) 리스크를 피하고 실제 수수료·택배비·광고비를 모두 인정받으려면 간편장부(또는 복식기장 20% 공제) 신고가 가장 안전합니다.',
+        'Use Simple/Double-Entry Bookkeeping to deduct actual fees, shipping, and ad spend without penalty.'
+      );
+    }
+
+    var bookkeepingLabel =
+      bookkeepingDuty === 'double_entry'
+        ? t('복식부기의무자 (재무상태표·손익계산서·사업용계좌 필수)', 'Double-Entry Bookkeeping Obligor (Balance Sheet & Business Account Required)')
+        : t('간편장부대상자 (간편장부 작성 또는 복식기장 시 산출세액 20% 공제)', 'Simple Bookkeeping Eligible (20% Credit if filing Double-Entry)');
+
+    if (isSincereFiling) {
+      bookkeepingLabel += t(' · [성실신고확인대상자(6월말)]', ' · [Sincere Filing Confirmation Required]');
+    }
+
+    // 4. 종합 세금 요약 및 월 적립 가이드
+    var annualVatPayable = activeVat.finalAnnualVat;
+    var annualIncomeTaxTotal = actualBook.totalIncomeTax;
+    var totalTaxBurden = annualVatPayable + annualIncomeTaxTotal;
+    var afterTaxNetProfit = preTaxCashProfit - totalTaxBurden;
+    var effectiveTaxRateOnSales = annualGrossSales > EPSILON ? (totalTaxBurden / annualGrossSales) * 100 : 0;
+    var effectiveTaxRateOnProfit = preTaxCashProfit > EPSILON ? (totalTaxBurden / preTaxCashProfit) * 100 : 0;
+    var monthlyTaxReserve = Math.max(0, Math.round(totalTaxBurden / 12));
+
+    // 5. 맞춤형 세무 신고 방법 & 일정 생성
+    var filingSchedule = [];
+    if (taxpayerType === 'exempt') {
+      filingSchedule.push({
+        period: t('매년 2월 10일까지', 'By Feb 10 Annually'),
+        title: t('면세사업자 사업장현황신고', 'VAT-Exempt Business Status Report'),
+        target: t('면세 매출·매입계산서 합계 확인 및 제출', 'Submit annual tax-free revenue & invoice summary'),
+        hometaxPath: t('국세청 홈택스 > 세금신고 > 부가가치세·사업장현황신고 > 면세사업자 사업장현황신고', 'HomeTax > Tax Filing > Business Status Report'),
+        highlight: true
+      });
+    } else if (taxpayerType === 'simplified') {
+      filingSchedule.push({
+        period: t('매년 1월 1일 ~ 1월 25일', 'Jan 1 – Jan 25 Annually'),
+        title: t('간이과세자 부가가치세 확정신고 (연 1회)', 'Simplified VAT Annual Final Return'),
+        target: activeVat.exemptApplied
+          ? t('예상 납부세액 0원 (연 4,800만 원 미만 납부면제 — 단, 매출액 신고는 필수)', '0 KRW payable (Exempt under 48M KRW — filing is still required)')
+          : t('연간 예상 납부세액 ' + formatCurrency(annualVatPayable) + ' (카드 1.3% 공제 반영)', 'Est. Payable: ' + formatCurrency(annualVatPayable) + ' (incl. 1.3% card credit)'),
+        hometaxPath: t('국세청 홈택스 > 세금신고 > 부가가치세 신고 > 간이과세자 정기신고 (마켓 매출 자동 조회 확인)', 'HomeTax > Tax Filing > VAT > Simplified Final Return'),
+        highlight: true
+      });
+      if (!activeVat.exemptApplied) {
+        filingSchedule.push({
+          period: t('매년 7월 1일 ~ 7월 25일 (해당 시)', 'Jul 1 – Jul 25 (If Applicable)'),
+          title: t('간이과세자 예정부과 납부 / 예정신고', 'Simplified VAT Interim Assessment / Return'),
+          target: t('전반기 세금계산서를 발급했거나 일반→간이 전환자·실적 급감(1/3 미만) 시 신고/납부', 'Applies if issuing B2B tax invoices or notified for interim assessment'),
+          hometaxPath: t('국세청 홈택스 > 세금신고 > 부가가치세 신고 > 예정신고', 'HomeTax > Tax Filing > VAT > Interim Return'),
+          highlight: false
+        });
+      }
+    } else {
+      filingSchedule.push({
+        period: t('매년 7월 25일 (1기) · 익년 1월 25일 (2기)', 'Jul 25 (H1) & Jan 25 (H2)'),
+        title: t('일반과세자 부가가치세 확정신고 (연 2회)', 'General VAT Semi-Annual Final Returns'),
+        target:
+          annualVatPayable >= 0
+            ? t('반기 평균 약 ' + formatCurrency(Math.round(annualVatPayable / 2)) + ' (연 ' + formatCurrency(annualVatPayable) + ')', '~' + formatCurrency(Math.round(annualVatPayable / 2)) + ' per half-year (' + formatCurrency(annualVatPayable) + '/yr)')
+            : t('매입세액 초과 연간 약 ' + formatCurrency(Math.abs(annualVatPayable)) + ' 환급 예상', 'Est. annual VAT refund of ' + formatCurrency(Math.abs(annualVatPayable))),
+        hometaxPath: t('국세청 홈택스 > 세금신고 > 부가가치세 신고 > 일반과세자 정기신고 (오픈마켓 대행 매출자료 불러오기)', 'HomeTax > Tax Filing > VAT > General Final Return'),
+        highlight: true
+      });
+      filingSchedule.push({
+        period: t('매년 4월 25일 · 10월 25일', 'Apr 25 & Oct 25'),
+        title: t('일반과세자 부가세 예정고지 납부 (또는 조기환급)', 'General VAT Quarterly Interim Assessment'),
+        target: t('직전 과세기간 납부세액의 50% 고지서 납부 (고지세액 50만 원 미만 생략, 적자 시 예정신고 선택)', 'Pay 50% prior-period VAT bill (waived if <500K KRW)'),
+        hometaxPath: t('국세청 홈택스 > 조회/발급 > 세금신고납부 > 납부할 세액 조회', 'HomeTax > Tax Payment Lookup'),
+        highlight: false
+      });
+    }
+
+    filingSchedule.push({
+      period: isSincereFiling ? t('매년 5월 1일 ~ 6월 30일 (성실신고확인)', 'May 1 – Jun 30 (Sincere Filing)') : t('매년 5월 1일 ~ 5월 31일', 'May 1 – May 31 Annually'),
+      title: t('종합소득세 · 개인지방소득세 확정신고', 'Comprehensive & Local Income Tax Filing'),
+      target: t(
+        bookkeepingDuty === 'double_entry'
+          ? '예상 세액 ' + formatCurrency(annualIncomeTaxTotal) + ' (복식부기 재무제표 첨부 필수, 세무사 검토 권장)'
+          : '장부신고 예상 ' + formatCurrency(annualIncomeTaxTotal) + ' (세후 10% 지방소득세 자동 연계 신고)',
+        'Est. ' + formatCurrency(annualIncomeTaxTotal) + ' (HomeTax + WeTax local income tax linked)'
+      ),
+      hometaxPath: t('국세청 홈택스 > 세금신고 > 종합소득세 신고 > 일반신고(또는 모두채움) → 완료 후 위택스 지방소득세 원클릭 납부', 'HomeTax > Income Tax Return -> WeTax Linked Local Tax'),
+      highlight: true
+    });
+
+    var checklists = [
+      t('오픈마켓(스마트스토어·쿠팡) 매출집계: 홈택스 [세금신고 > 부가가치세 > 조회서비스 > 신용카드·판매대행 매출자료 조회]에서 누락 없이 불러오세요.', 'Verify marketplace PG/proxy sales directly in HomeTax Sales Data Lookup to prevent omitted or duplicated sales.'),
+      t('매입세액 공제 누락 방지: 홈택스에 [사업용 신용카드]를 사전 등록하고, 마켓 수수료 세금계산서(월말/익월 초 마켓 정산센터 발급분)와 광고비 세금계산서를 꼭 매칭하세요.', 'Register your business credit card on HomeTax and collect monthly fee & ad tax invoices from marketplaces.'),
+      t('세금 통장 분리 적립: 계산된 매월 예상 적립액(' + formatCurrency(monthlyTaxReserve) + ')을 정산금 입금 시 별도 통장으로 이체해 두면 1·5·7월 세금 폭탄을 막을 수 있습니다.', 'Transfer ' + formatCurrency(monthlyTaxReserve) + '/month into a dedicated tax reserve account upon payout.')
+    ];
+    if (bookkeepingDuty === 'double_entry') {
+      checklists.push(t('복식부기의무자 필수 조치: 사업용계좌 홈택스 사전 등록 및 인건비·임차료 원천세(매월 10일) 신고 여부를 점검하세요.', 'Double-Entry Obligor: Ensure a dedicated business bank account is registered on HomeTax.'));
+    }
+    if (nonQualifiedAmount > 0) {
+      checklists.push(t('적격증빙 미수취 지출 주의: 연간 ' + formatCurrency(nonQualifiedAmount) + '의 비적격 지출은 건당 3만 원 초과 시 증빙불비 가산세(2%) 대상이 될 수 있습니다.', 'Non-qualified expenses (' + formatCurrency(nonQualifiedAmount) + ') over 30K KRW/tx risk a 2% surcharge.'));
+    }
+
+    return {
+      inputs: normalizedInputs,
+      spec: spec,
+      annualized: annualized,
+      classification: {
+        determinedType: determinedType,
+        taxpayerType: taxpayerType,
+        title: title,
+        subtitle: subtitle,
+        legalBasis: legalBasis,
+        invoiceDutyText: invoiceDutyText,
+        conversionAlertText: conversionAlertText,
+        thresholds: {
+          exemptLimit: VAT_EXEMPT_PAYMENT_THRESHOLD,
+          simpleExpenseContLimit: spec.simpleExpenseContLimit,
+          simplifiedLimit: VAT_SIMPLIFIED_THRESHOLD,
+          doubleEntryLimit: spec.doubleEntryLimit,
+          sincereFilingLimit: spec.sincereFilingLimit
+        }
+      },
+      vat: activeVat,
+      incomeTax: {
+        bookkeepingDuty: bookkeepingDuty,
+        bookkeepingLabel: bookkeepingLabel,
+        isSincereFiling: isSincereFiling,
+        expenseRateEligibility: expenseRateEligibility,
+        actualBook: actualBook,
+        estimatedRate: estimatedRate,
+        recommendedMethodText: recommendedMethodText
+      },
+      summary: {
+        annualGrossSales: annualGrossSales,
+        preTaxCashProfit: preTaxCashProfit,
+        annualVatPayable: annualVatPayable,
+        annualIncomeTaxTotal: annualIncomeTaxTotal,
+        totalTaxBurden: totalTaxBurden,
+        afterTaxNetProfit: afterTaxNetProfit,
+        effectiveTaxRateOnSales: effectiveTaxRateOnSales,
+        effectiveTaxRateOnProfit: effectiveTaxRateOnProfit,
+        monthlyTaxReserve: monthlyTaxReserve
+      },
+      filingSchedule: filingSchedule,
+      checklists: checklists
+    };
+  }
+
   return {
     DEFAULT_INPUTS: DEFAULT_INPUTS,
     FEE_BASIS_LABELS: FEE_BASIS_LABELS,
     AD_REVENUE_BASIS_LABELS: AD_REVENUE_BASIS_LABELS,
     TAXPAYER_LABELS: TAXPAYER_LABELS,
+    VAT_SIMPLIFIED_THRESHOLD: VAT_SIMPLIFIED_THRESHOLD,
+    VAT_EXEMPT_PAYMENT_THRESHOLD: VAT_EXEMPT_PAYMENT_THRESHOLD,
+    KOREAN_INCOME_TAX_BRACKETS: KOREAN_INCOME_TAX_BRACKETS,
+    INDUSTRY_TAX_SPECS: INDUSTRY_TAX_SPECS,
+    calculateKoreanTax: calculateKoreanTax,
     getLang: getLang,
     setLang: setLang,
     t: t,

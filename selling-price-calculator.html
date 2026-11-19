@@ -42,6 +42,7 @@
         <a class="nav-link" href="profit-calculator.html">순이익·정산 계산기</a>
         <a class="nav-link" href="roas-calculator.html">손익분기 ROAS</a>
         <a class="nav-link active" href="selling-price-calculator.html">판매가 역산기</a>
+        <a class="nav-link" href="tax-calculator.html">세무·과세 진단기</a>
         <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
       </nav>
     </div>
@@ -217,11 +218,11 @@
                       <label for="simplifiedValueAddedRate">간이과세 업종별 부가가치율 (%)</label>
                       <select id="simplifiedValueAddedRate" name="simplifiedValueAddedRate" class="select-control">
                         <option value="">미선택 (필수 입력 전 계산 보류)</option>
-                        <option value="15">소매업·전기/가스/증기 (15%)</option>
-                        <option value="20">제조업·농임어업·소화물운송 (20%)</option>
-                        <option value="25">건설업·부동산임대 (25%)</option>
-                        <option value="30">음식점업·숙박업·운수창고통신 (30%)</option>
-                        <option value="40">기타 서비스업 (40%)</option>
+                        <option value="15">소매업(전자상거래)·음식점업·재생용 재료수집 (15%)</option>
+                        <option value="20">제조업(최종소비자 상대)·농임어업·소화물운송 (20%)</option>
+                        <option value="25">숙박업 (25%)</option>
+                        <option value="30">건설업·운수창고업·정보통신업 (30%)</option>
+                        <option value="40">부동산임대업·전문과학기술·사업지원·기타서비스 (40%)</option>
                       </select>
                     </div>
                     <div class="field">
@@ -422,6 +423,7 @@
         <a href="index.html">종합 대시보드</a>
         <a href="profit-calculator.html">순이익 계산기</a>
         <a href="roas-calculator.html">ROAS 계산기</a>
+        <a href="tax-calculator.html">세무·과세 진단기</a>
         <a href="legal.html">개인정보처리방침·이용약관·면책고지</a>
       </div>
     </div>
@@ -516,6 +518,10 @@
           if (el) current[key] = el.value;
         });
         var simpVal = document.getElementById('simplifiedValueAddedRate').value;
+        if (document.getElementById('taxpayerType').value === 'simplified' && simpVal === '') {
+          document.getElementById('simplifiedValueAddedRate').value = '15';
+          simpVal = '15';
+        }
         current.simplifiedValueAddedRate = simpVal === '' ? null : Number(simpVal);
         return SM.normalizeInputs(current);
       }

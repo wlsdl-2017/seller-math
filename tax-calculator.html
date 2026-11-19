@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>셀러 세무·과세 진단기 (부가세·종합소득세·신고방법) | SELLER MATH</title>
+  <meta name="description" content="정산 캡처 사진이나 매출 엑셀(.xlsx/.csv)만 넣으면 대한민국 현행 세법(1억 400만 원 간이과세 기준, 8단계 종소세 누진세율, 기장의무, 신고방법)을 오류 없이 진단해 주는 무료 셀러 세무 도구입니다.">
+  <link rel="canonical" href="https://seller-math.pages.dev/tax-calculator">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="대한민국 셀러 세무·과세 진단기 | SELLER MATH">
+  <meta property="og:description" content="일반/간이/면세 과세유형 판정부터 부가세·종소세 예상액, 장부 vs 경비율 절세 비교, 홈택스 신고 일정까지 한눈에 진단합니다.">
+  <meta property="og:url" content="https://seller-math.pages.dev/tax-calculator">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SELLER MATH 대한민국 셀러 세무·과세 진단기",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "ko",
+    "url": "https://seller-math.pages.dev/tax-calculator",
+    "description": "부가가치세법(간이과세 1억 400만 원·면제 4,800만 원·카드발행세액공제 1.3%) 및 소득세법(8단계 누진세율·단순/기준경비율·복식부기 기준)을 반영한 무료 웹 세무 진단 도구입니다.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "KRW"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-title">SELLER MATH</span>
+        <span class="brand-sub">쇼핑몰 정산 · 마진 · ROAS 계산기</span>
+      </a>
+      <nav class="main-nav" aria-label="주 메뉴">
+        <a class="nav-link" href="index.html">종합 대시보드</a>
+        <a class="nav-link" href="profit-calculator.html">순이익·정산 계산기</a>
+        <a class="nav-link" href="roas-calculator.html">손익분기 ROAS</a>
+        <a class="nav-link" href="selling-price-calculator.html">판매가 역산기</a>
+        <a class="nav-link active" href="tax-calculator.html">세무·과세 진단기</a>
+        <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="container">
+      <section class="hero-card">
+        <span class="hero-eyebrow" data-i18n-en="Korean VAT & Income Tax Law Engine">현행 대한민국 부가가치세법 · 소득세법 적용</span>
+        <h1>셀러 세무 · 과세유형 · 신고방법 통합 진단기</h1>
+        <p class="hero-desc" data-i18n-en="Upload a settlement screenshot or Excel sheet (.xlsx/.csv) to check your Korean VAT status (<48M exempt, <104M simplified, >=104M general), 8-bracket income tax, bookkeeping vs. expense rate comparison, and HomeTax filing steps. 100% local in your browser.">
+          정산 내역 캡처 사진이나 매출 엑셀(`.xlsx`, `.csv`)을 넣으면 간이·일반·면세 과세유형 판정, 부가가치세·종합소득세 예상액,
+          장부 vs 경비율 유불리 비교, 홈택스 신고 일정까지 한눈에 정리해 드립니다.
+        </p>
+      </section>
+
+      <aside class="ad-slot ad-slot-banner" aria-label="상단 광고 영역">
+        <span>광고 영역 (승인 후 애드센스 / 애드핏 배너 코드 삽입 위치 · CLS 방지 높이 확보)</span>
+      </aside>
+
+      <!-- 사진 · 엑셀 업로드 및 프리셋 인테이크 -->
+      <section class="card" aria-label="정산 캡처 사진 및 엑셀 간편 입력">
+        <div class="bulk-excel-header">
+          <div>
+            <h2 class="card-title">1단계: 정산 캡처 사진 또는 매출 엑셀로 3초 입력</h2>
+            <p class="card-subtitle">사진이나 엑셀이 없다면 아래 원클릭 셀러 예시 또는 기존 계산기 데이터를 바로 불러올 수 있습니다.</p>
+          </div>
+          <span class="bulk-privacy-badge">🔒 과금 가능성 0% · 외부 AI/서버 전송 없음 (브라우저 로컬 연산)</span>
+        </div>
+
+        <div class="tax-intake-grid">
+          <!-- 좌측: 정산 캡처 사진 -->
+          <div class="tax-intake-box">
+            <h3 class="tax-intake-title">📸 정산·매출 캡처 사진 넣기 (파일 또는 Ctrl+V)</h3>
+            <p class="tax-intake-desc" data-i18n-en="Drop an image (.png/.jpg/.webp) or press Ctrl+V to paste a screenshot. Supported browsers run local text detection at zero cost; otherwise compare side-by-side and convert 1-month figures to 12-month annualized figures in one click.">
+              스마트스토어·쿠팡 정산 화면 캡처를 끌어다 놓거나 화면 아무 곳에서 <code>Ctrl+V</code>로 붙여넣으세요.
+              이미지 옆에서 기간 배수(1개월×12 연환산)를 눌러 숫자를 대조 입력할 수 있습니다. (유료 OCR API 미사용·비용 0원)
+            </p>
+            <label class="excel-dropzone" id="img-dropzone" style="padding: 18px 14px;">
+              <input id="tax-image-input" type="file" accept="image/*" class="excel-file-input">
+              <div class="excel-dropzone-icon">🖼️</div>
+              <div class="excel-dropzone-title">클릭해 캡처 이미지 선택 · 드래그 · Ctrl+V</div>
+              <div class="excel-dropzone-sub">PNG, JPG, WEBP 지원 · 100% 브라우저 내 미리보기</div>
+            </label>
+
+            <div id="screenshot-viewer-wrap" class="screenshot-viewer-box" hidden>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <strong id="screenshot-filename" style="font-size:0.82rem;">캡처 이미지</strong>
+                <button type="button" class="btn btn-ghost btn-table-sm" id="btn-clear-image">이미지 닫기</button>
+              </div>
+              <img id="screenshot-preview-img" alt="업로드된 정산 캡처 미리보기">
+              <div id="ocr-status-msg" class="field-help" style="margin:0;"></div>
+              <div id="ocr-chips-wrap" hidden>
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:6px;">
+                  <label for="ocr-target-field" style="font-size:0.78rem; font-weight:700;">추출 숫자 적용할 칸:</label>
+                  <select id="ocr-target-field" class="select-control" style="width:auto; padding:4px 10px; font-size:0.8rem;">
+                    <option value="grossSales">총 매출액 (원)</option>
+                    <option value="cogsTotal">상품 매입원가 (원)</option>
+                    <option value="platformFeeTotal">마켓 수수료 (원)</option>
+                    <option value="shippingCostTotal">택배·물류비 (원)</option>
+                    <option value="adSpendTotal">광고비 (원)</option>
+                    <option value="otherExpenseTotal">기타 경비 (원)</option>
+                  </select>
+                </div>
+                <div id="ocr-chip-row" class="ocr-chip-row"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 우측: 매출 엑셀 업로드 & 프리셋 -->
+          <div class="tax-intake-box">
+            <h3 class="tax-intake-title">📊 매출·정산 엑셀(.xlsx · .csv) 자동 합산 입력</h3>
+            <p class="tax-intake-desc" data-i18n-en="Upload your .xlsx, .csv, or .tsv sheet to sum total sales, COGS, fees, shipping, and ad spend across all SKUs automatically for Korean tax diagnosis.">
+              엑셀 장부를 올리면 전체 품목의 매출·원가·수수료·택배비·광고비를 자동 합산해 세무 계산 폼에 즉시 채워줍니다.
+            </p>
+            <label class="excel-dropzone" id="tax-excel-dropzone" style="padding: 18px 14px;">
+              <input id="tax-excel-input" type="file" accept=".xlsx,.csv,.tsv,.txt" class="excel-file-input">
+              <div class="excel-dropzone-icon">📑</div>
+              <div class="excel-dropzone-title">여기를 클릭하거나 .xlsx · .csv 파일을 끌어다 놓으세요</div>
+              <div class="excel-dropzone-sub">단일 주문 장부·품목별 수량 시트 모두 합계 자동 계산</div>
+            </label>
+            <div id="tax-excel-status" class="status-pill status-positive" hidden></div>
+
+            <div class="preset-pill-row">
+              <button type="button" class="btn btn-primary btn-table-sm" id="btn-sync-profit-calc">현재 순이익 계산기(연환산) 불러오기</button>
+              <button type="button" class="btn btn-secondary btn-table-sm" id="btn-preset-36m">예시: 연 3,600만(납부면제)</button>
+              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-84m">예시: 연 8,400만(간이)</button>
+              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-150m">예시: 연 1.5억(일반전환)</button>
+              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-450m">예시: 연 4.5억(복식부기)</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="workspace-grid">
+        <!-- 좌측 세무 입력 폼 -->
+        <section class="card" aria-label="사업자 및 매출·비용 세무 조건 입력">
+          <div class="scenario-toolbar">
+            <h2 class="card-title">2단계: 매출 · 비용 · 사업자 조건</h2>
+            <div class="btn-row">
+              <button type="button" class="btn btn-ghost" id="btn-reset-tax">초기화</button>
+            </div>
+          </div>
+
+          <form id="tax-form" novalidate>
+            <div class="form-section-label">1. 업종 · 기간 · 과세유형 기준</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="tax-periodMode">입력한 금액의 기준 기간</label>
+                <select id="tax-periodMode" class="select-control">
+                  <option value="annual">1년 전체 매출·비용 (×1 그대로 계산)</option>
+                  <option value="monthly">1개월 정산 캡처/월매출 (×12 자동 연환산)</option>
+                  <option value="half_year">반기 6개월 (×2 자동 연환산)</option>
+                  <option value="quarterly">분기 3개월 (×4 자동 연환산)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="tax-industryKey">판매 업종 (부가가치율·경비율 자동 적용)</label>
+                <select id="tax-industryKey" class="select-control">
+                  <option value="retail_ecommerce">전자상거래 · 소매업 (부가율 15% · 복식 3억)</option>
+                  <option value="food">음식점업 · 카페 (부가율 15% · 복식 1.5억)</option>
+                  <option value="manufacturing_b2c">제조업 최종소비자 판매 (부가율 20% · 복식 1.5억)</option>
+                  <option value="service_it">정보통신 · 마케팅 · 서비스업 (부가율 30% · 복식 7,500만)</option>
+                  <option value="wholesale_excluded">도매업 · 상품중개업 (간이과세 배제 → 일반과세)</option>
+                  <option value="exempt_goods">면세재화 (미가공 농축수산물 · 도서 등)</option>
+                </select>
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="tax-taxpayerOverride">과세유형 적용 방식</label>
+                  <select id="tax-taxpayerOverride" class="select-control">
+                    <option value="auto">세법 기준 자동 판정 (권장)</option>
+                    <option value="general">일반과세자 직접 지정</option>
+                    <option value="simplified">간이과세자 직접 지정</option>
+                    <option value="exempt">면세사업자 직접 지정</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="tax-priorYearGrossSales">직전 연도 연매출 (원 · 선택)</label>
+                  <input id="tax-priorYearGrossSales" type="number" min="0" step="10000" class="input-control" placeholder="비우면 현재 연환산 매출 기준">
+                </div>
+              </div>
+              <label class="checkbox-row">
+                <input id="tax-isNewBusiness" type="checkbox">
+                <span>올해 처음 사업자를 낸 신규 창업자입니다 (직전 연도 매출 0원)</span>
+              </label>
+            </div>
+
+            <div class="form-section-label">2. 매출 및 경비 합계 (VAT 포함 실제 거래액)</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="tax-grossSales">총 판매 매출액 (고객 실결제 합계, 원)</label>
+                <input id="tax-grossSales" type="number" min="0" step="1000" class="input-control">
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="tax-cogsTotal">상품 매입원가 합계 (원)</label>
+                  <input id="tax-cogsTotal" type="number" min="0" step="1000" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="tax-platformFeeTotal">마켓 판매수수료 합계 (원)</label>
+                  <input id="tax-platformFeeTotal" type="number" min="0" step="1000" class="input-control">
+                </div>
+              </div>
+              <div class="form-grid-2">
+                <div class="field">
+                  <label for="tax-shippingCostTotal">택배 · 물류비 합계 (원)</label>
+                  <input id="tax-shippingCostTotal" type="number" min="0" step="1000" class="input-control">
+                </div>
+                <div class="field">
+                  <label for="tax-adSpendTotal">광고비 집행 합계 (원)</label>
+                  <input id="tax-adSpendTotal" type="number" min="0" step="1000" class="input-control">
+                </div>
+              </div>
+              <div class="field">
+                <label for="tax-otherExpenseTotal">기타 고정 경비 (임대료·포장비·인건비 등, 원)</label>
+                <input id="tax-otherExpenseTotal" type="number" min="0" step="1000" class="input-control">
+              </div>
+            </div>
+
+            <details class="advanced-vat-panel" open>
+              <summary>3. 공제 · 증빙 · 소득공제 세부 조건 (세무사 정밀 계산)</summary>
+              <div class="advanced-vat-body">
+                <div class="form-grid-2">
+                  <div class="field">
+                    <label for="tax-cardSalesRatio">카드·PG·현금영수증 매출 비중 (%)</label>
+                    <input id="tax-cardSalesRatio" type="number" min="0" max="100" step="1" class="input-control">
+                    <div class="field-help">개인사업자 1.3%(연 1천만 원 한도) 발행공제 적용</div>
+                  </div>
+                  <div class="field">
+                    <label for="tax-nonQualifiedExpenseRatio">적격증빙 미수취 지출 비율 (%)</label>
+                    <input id="tax-nonQualifiedExpenseRatio" type="number" min="0" max="100" step="1" class="input-control">
+                    <div class="field-help">세금계산서·카드 없는 현금 사입/간이영수증 비율</div>
+                  </div>
+                </div>
+                <div class="form-grid-2" style="margin-top: 10px;">
+                  <div class="field">
+                    <label for="tax-dependentsCount">인적공제 대상 가족 수 (본인 포함 명)</label>
+                    <input id="tax-dependentsCount" type="number" min="1" max="20" step="1" class="input-control">
+                    <div class="field-help">1명당 연 150만 원 기본공제</div>
+                  </div>
+                  <div class="field">
+                    <label for="tax-extraDeduction">추가 소득공제 (노란우산·연금 등 연 원)</label>
+                    <input id="tax-extraDeduction" type="number" min="0" step="10000" class="input-control">
+                  </div>
+                </div>
+                <div class="form-grid" style="margin-top: 10px;">
+                  <label class="checkbox-row">
+                    <input id="tax-useDoubleEntryCredit" type="checkbox">
+                    <span>간편장부대상자이지만 복식부기로 기장 (산출세액 20% 기장세액공제)</span>
+                  </label>
+                  <label class="checkbox-row">
+                    <input id="tax-includeEFilingCredit" type="checkbox">
+                    <span>홈택스 전자신고 세액공제 반영 (부가세·종소세)</span>
+                  </label>
+                </div>
+              </div>
+            </details>
+          </form>
+
+          <div class="btn-row" style="margin-top: 16px;">
+            <button type="button" class="btn btn-primary" id="btn-copy-tax-summary">세무 진단 요약 복사</button>
+            <button type="button" class="btn btn-ghost" id="btn-print-tax">인쇄 / PDF 저장</button>
+          </div>
+          <div id="tax-action-toast" class="toast-msg" hidden role="status" aria-live="polite"></div>
+        </section>
+
+        <!-- 우측 세무 진단 결과 대시보드 -->
+        <div>
+          <section class="card" aria-label="세법 판정 및 세액 진단 결과">
+            <h2 class="card-title">과세 대상 판정 · 예상 세금 진단 결과</h2>
+            <p class="card-subtitle">부가가치세법 제61조(1억 400만 원)·제69조(4,800만 원)·제46조(1.3% 카드공제) 및 소득세법 제55조 8단계 누진세율을 적용한 결과입니다.</p>
+
+            <div id="tax-verdict-box"></div>
+            <div id="threshold-meter-box"></div>
+            <div id="tax-kpi-grid" class="kpi-grid"></div>
+          </section>
+
+          <section class="card" aria-label="부가가치세 및 종합소득세 상세 비교">
+            <h2 class="card-title">부가세(일반 vs 간이) · 종소세(장부 vs 경비율) 절세 비교</h2>
+            <p class="card-subtitle">동일한 매출·비용일 때 과세유형과 신고 방식에 따른 세액 차이를 비교합니다.</p>
+            <div id="tax-comparison-box" class="tax-comparison-grid"></div>
+          </section>
+
+          <section class="card" aria-label="대한민국 종합소득세 8단계 누진세율표">
+            <h2 class="card-title">종합소득세 8단계 누진세율표 &amp; 내 과세표준 구간</h2>
+            <p class="card-subtitle">현재 장부상 과세표준이 어느 세율 구간(6% ~ 45%)에 속하는지 강조 표시합니다.</p>
+            <div id="bracket-table-box"></div>
+          </section>
+
+          <section class="card" aria-label="신고 일정 및 홈택스 신고 가이드">
+            <h2 class="card-title">언제 · 어떻게 신고해야 하나요? (맞춤 신고 캘린더)</h2>
+            <p class="card-subtitle">판정된 사업자 유형에 맞춰 반드시 챙겨야 할 신고 기간과 국세청 홈택스 메뉴 경로입니다.</p>
+            <div id="filing-schedule-box"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- 본문 중간 광고 슬롯 -->
+      <aside class="ad-slot ad-slot-incontent" aria-label="본문 광고 영역">
+        <span>광고 영역 (승인 후 애드센스 반응형 / 애드핏 코드 삽입 위치 · CLS 방지)</span>
+      </aside>
+
+      <article class="article-section">
+        <h2>온라인 셀러가 꼭 알아야 할 대한민국 세법 4대 핵심 기준 (2024.7.1. 개정~현행)</h2>
+        <h3>1. 간이과세 기준금액 1억 400만 원 vs 납부면제 4,800만 원</h3>
+        <p data-i18n-en="Under current Korean VAT law (effective July 2024), individual businesses with prior-year gross sales below 104M KRW qualify as Simplified Taxpayers (excluding excluded industries like wholesale). If current-year gross sales stay below 48M KRW, VAT payment is exempt (0 KRW), though annual January filing is still required.">
+          2024년 7월 1일부터 부가가치세법상 <strong>간이과세자 적용 기준이 직전 연도 공급대가 8,000만 원에서 1억 400만 원 미만으로 상향</strong>되었습니다.
+          연 매출(공급대가)이 <strong>4,800만 원 미만</strong>이면 부가가치세 납부 의무가 면제(0원)되고, 4,800만 원 이상 ~ 1억 400만 원 미만이면 업종별 부가가치율(소매·전자상거래 15%, 즉 매출의 1.5%)만 내고 적격증빙 매입대가의 0.5%를 공제받습니다.
+        </p>
+
+        <h3>2. 마켓 셀러의 숨은 절세 포인트: 신용카드·PG 발행세액공제 1.3%</h3>
+        <p data-i18n-en="Sole proprietors with prior-year supply value of 1B KRW or less receive a 1.3% tax credit (capped at 10M KRW/year) on credit card, cash receipt, and marketplace PG sales, limited to positive VAT payable.">
+          스마트스토어·쿠팡 같은 오픈마켓 매출은 대부분 신용카드·체크카드·간편결제(PG)로 이루어집니다.
+          직전 연도 과세공급가액 <strong>10억 원 이하 개인사업자</strong>는 <code>부가가치세법 제46조</code>에 따라 카드·현금영수증·결제대행 매출의 <strong>1.3% (연 1,000만 원 한도)</strong>를 납부할 부가가치세에서 깎아줍니다(납부세액 한도 내 비환급).
+        </p>
+
+        <h3>3. 부가세 0원이어도 5월 종합소득세는 별도입니다</h3>
+        <p data-i18n-en="VAT exemption (<48M KRW) does NOT exempt Comprehensive Income Tax. Every business owner must file Income Tax in May based on business profit minus deductions across Korea's 8 progressive brackets (6% to 45%) plus 10% local income tax.">
+          연 매출 4,800만 원 미만 간이과세자로 부가세가 0원이 나오거나 면세사업자라 하더라도, <strong>매년 5월 종합소득세(6%~45% 누진세율 + 지방소득세 10%)</strong>는 사업소득에 따라 별도로 계산되어 부과됩니다.
+          특히 실제 마진이 박한 셀러나 초기 적자가 난 경우에는 국세청 경비율 추계보다 <strong>실제 지출 증빙을 모아 장부기장 신고(간편장부 또는 복식부기 20% 기장세액공제)</strong>를 하는 것이 세금을 크게 줄이거나 이월결손금 혜택을 받는 핵심 방법입니다.
+        </p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>SELLER MATH</strong> — 쇼핑몰 셀러 정산·마진·ROAS·판매가 역산 무료 웹 도구<br>
+        <span>본 세무 진단은 현행 부가가치세법·소득세법 일반 기준에 따른 모의 계산이며, 특수 공제·감면·겸영 여부 등에 따른 확정 신고는 관할 세무서 또는 세무사와 확인하시기 바랍니다.</span>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">종합 대시보드</a>
+        <a href="profit-calculator.html">순이익 계산기</a>
+        <a href="roas-calculator.html">ROAS 계산기</a>
+        <a href="selling-price-calculator.html">판매가 역산기</a>
+        <a href="legal.html">개인정보처리방침·이용약관·면책고지</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="common.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var SM = window.SellerMath;
+
+      var form = document.getElementById('tax-form');
+      var verdictBox = document.getElementById('tax-verdict-box');
+      var thresholdBox = document.getElementById('threshold-meter-box');
+      var kpiGrid = document.getElementById('tax-kpi-grid');
+      var compBox = document.getElementById('tax-comparison-box');
+      var bracketBox = document.getElementById('bracket-table-box');
+      var scheduleBox = document.getElementById('filing-schedule-box');
+      var toastEl = document.getElementById('tax-action-toast');
+
+      var imageInput = document.getElementById('tax-image-input');
+      var imgDropzone = document.getElementById('img-dropzone');
+      var viewerWrap = document.getElementById('screenshot-viewer-wrap');
+      var previewImg = document.getElementById('screenshot-preview-img');
+      var screenshotFilename = document.getElementById('screenshot-filename');
+      var ocrStatusMsg = document.getElementById('ocr-status-msg');
+      var ocrChipsWrap = document.getElementById('ocr-chips-wrap');
+      var ocrChipRow = document.getElementById('ocr-chip-row');
+      var ocrTargetField = document.getElementById('ocr-target-field');
+
+      var excelInput = document.getElementById('tax-excel-input');
+      var excelDropzone = document.getElementById('tax-excel-dropzone');
+      var excelStatus = document.getElementById('tax-excel-status');
+
+      var currentObjectUrl = null;
+      var lastTaxResult = null;
+
+      var PAGE_DICT = {
+        '셀러 세무 · 과세유형 · 신고방법 통합 진단기': 'Korean Seller Tax, VAT & Filing Diagnostic Tool',
+        '1단계: 정산 캡처 사진 또는 매출 엑셀로 3초 입력': 'Step 1: 3-Second Input via Screenshot or Excel Sheet',
+        '사진이나 엑셀이 없다면 아래 원클릭 셀러 예시 또는 기존 계산기 데이터를 바로 불러올 수 있습니다.': 'Or load realistic seller presets or your active Profit Calculator inputs in one click.',
+        '🔒 과금 가능성 0% · 외부 AI/서버 전송 없음 (브라우저 로컬 연산)': '🔒 Zero Cost Guaranteed · 100% Browser Local (No Paid OCR/Server)',
+        '📸 정산·매출 캡처 사진 넣기 (파일 또는 Ctrl+V)': '📸 Settlement Screenshot Input (Drop or Ctrl+V)',
+        '클릭해 캡처 이미지 선택 · 드래그 · Ctrl+V': 'Click to choose screenshot · Drag & Drop · Ctrl+V',
+        'PNG, JPG, WEBP 지원 · 100% 브라우저 내 미리보기': 'PNG, JPG, WEBP · 100% Local Browser Preview',
+        '📊 매출·정산 엑셀(.xlsx · .csv) 자동 합산 입력': '📊 Excel (.xlsx / .csv) Auto-Sum Tax Input',
+        '여기를 클릭하거나 .xlsx · .csv 파일을 끌어다 놓으세요': 'Click or drag & drop .xlsx / .csv sheet here',
+        '단일 주문 장부·품목별 수량 시트 모두 합계 자동 계산': 'Auto-sums single orders or SKU quantity sheets',
+        '현재 순이익 계산기(연환산) 불러오기': 'Load Profit Calculator (×12 Mos)',
+        '예시: 연 3,600만(납부면제)': 'Preset: 36M KRW (VAT Exempt)',
+        '예시: 연 8,400만(간이)': 'Preset: 84M KRW (Simplified)',
+        '예시: 연 1.5억(일반전환)': 'Preset: 150M KRW (General)',
+        '예시: 연 4.5억(복식부기)': 'Preset: 450M KRW (Double-Entry)',
+        '2단계: 매출 · 비용 · 사업자 조건': 'Step 2: Sales, Costs & Business Conditions',
+        '초기화': 'Reset',
+        '1. 업종 · 기간 · 과세유형 기준': '1. Industry, Period & Tax Classification',
+        '입력한 금액의 기준 기간': 'Entered Data Period',
+        '1년 전체 매출·비용 (×1 그대로 계산)': 'Full 1 Year (×1)',
+        '1개월 정산 캡처/월매출 (×12 자동 연환산)': '1-Month Screenshot/Data (×12 Annualized)',
+        '반기 6개월 (×2 자동 연환산)': 'Half-Year 6 Mos (×2 Annualized)',
+        '분기 3개월 (×4 자동 연환산)': 'Quarter 3 Mos (×4 Annualized)',
+        '판매 업종 (부가가치율·경비율 자동 적용)': 'Business Industry (Statutory Rates Applied)',
+        '전자상거래 · 소매업 (부가율 15% · 복식 3억)': 'E-Commerce / Retail (VAT Rate 15% · 300M Double-Entry)',
+        '음식점업 · 카페 (부가율 15% · 복식 1.5억)': 'Restaurants & Cafe (VAT Rate 15% · 150M Double-Entry)',
+        '제조업 최종소비자 판매 (부가율 20% · 복식 1.5억)': 'B2C Manufacturing (VAT Rate 20% · 150M Double-Entry)',
+        '정보통신 · 마케팅 · 서비스업 (부가율 30% · 복식 7,500만)': 'IT / Marketing / Services (VAT Rate 30% · 75M Double-Entry)',
+        '도매업 · 상품중개업 (간이과세 배제 → 일반과세)': 'Wholesale / Brokerage (General Only)',
+        '면세재화 (미가공 농축수산물 · 도서 등)': 'VAT-Exempt Goods (Unprocessed Food / Books)',
+        '과세유형 적용 방식': 'Taxpayer Classification Mode',
+        '세법 기준 자동 판정 (권장)': 'Auto-Detect by Korean Tax Law (Recommended)',
+        '일반과세자 직접 지정': 'Force General Taxpayer',
+        '간이과세자 직접 지정': 'Force Simplified Taxpayer',
+        '면세사업자 직접 지정': 'Force VAT-Exempt Business',
+        '직전 연도 연매출 (원 · 선택)': 'Prior-Year Annual Sales (KRW, Optional)',
+        '비우면 현재 연환산 매출 기준': 'Blank = evaluate by annualized sales',
+        '올해 처음 사업자를 낸 신규 창업자입니다 (직전 연도 매출 0원)': 'New business opened this year (0 prior-year sales)',
+        '2. 매출 및 경비 합계 (VAT 포함 실제 거래액)': '2. Total Sales & Cash Expenses (VAT Inclusive)',
+        '총 판매 매출액 (고객 실결제 합계, 원)': 'Total Gross Sales (Customer Payment, KRW)',
+        '상품 매입원가 합계 (원)': 'Total COGS / Purchases (KRW)',
+        '마켓 판매수수료 합계 (원)': 'Total Marketplace Fees (KRW)',
+        '택배 · 물류비 합계 (원)': 'Total Courier & Logistics Costs (KRW)',
+        '광고비 집행 합계 (원)': 'Total Ad Spend (KRW)',
+        '기타 고정 경비 (임대료·포장비·인건비 등, 원)': 'Other Business Expenses (Rent, Payroll, Packaging, KRW)',
+        '3. 공제 · 증빙 · 소득공제 세부 조건 (세무사 정밀 계산)': '3. Tax Credits, Qualified Invoices & Deductions',
+        '카드·PG·현금영수증 매출 비중 (%)': 'Card / PG / Cash Receipt Sales Share (%)',
+        '개인사업자 1.3%(연 1천만 원 한도) 발행공제 적용': '1.3% credit up to 10M KRW/yr for sole proprietors',
+        '적격증빙 미수취 지출 비율 (%)': 'Non-Qualified Cash Expense Ratio (%)',
+        '세금계산서·카드 없는 현금 사입/간이영수증 비율': 'Expenses lacking tax invoices or business card receipts',
+        '인적공제 대상 가족 수 (본인 포함 명)': 'Personal Deduction Dependents (Incl. Self)',
+        '1명당 연 150만 원 기본공제': '1.5M KRW deduction per person annually',
+        '추가 소득공제 (노란우산·연금 등 연 원)': 'Extra Income Deductions (Yellow Umbrella, Pension, KRW)',
+        '간편장부대상자이지만 복식부기로 기장 (산출세액 20% 기장세액공제)': 'Simple-book obligor opting into Double-Entry (20% credit)',
+        '홈택스 전자신고 세액공제 반영 (부가세·종소세)': 'Include HomeTax e-Filing tax credits',
+        '세무 진단 요약 복사': 'Copy Tax Diagnosis',
+        '과세 대상 판정 · 예상 세금 진단 결과': 'Taxpayer Classification & Tax Liability Diagnosis',
+        '부가가치세법 제61조(1억 400만 원)·제69조(4,800만 원)·제46조(1.3% 카드공제) 및 소득세법 제55조 8단계 누진세율을 적용한 결과입니다.': 'Computed under current Korean VAT Act (104M/48M thresholds, 1.3% card credit) and Income Tax Act (8 progressive brackets).',
+        '부가세(일반 vs 간이) · 종소세(장부 vs 경비율) 절세 비교': 'VAT (General vs Simplified) & Income Tax (Bookkeeping vs Expense Rate) Comparison',
+        '동일한 매출·비용일 때 과세유형과 신고 방식에 따른 세액 차이를 비교합니다.': 'Compare statutory tax burdens across classification and filing methods for the same revenue.',
+        '종합소득세 8단계 누진세율표 & 내 과세표준 구간': '8-Bracket Income Tax Rate Schedule & Your Active Tier',
+        '현재 장부상 과세표준이 어느 세율 구간(6% ~ 45%)에 속하는지 강조 표시합니다.': 'Highlights where your current taxable base sits on Korea’s 6%–45% progressive schedule.',
+        '언제 · 어떻게 신고해야 하나요? (맞춤 신고 캘린더)': 'When & How to File (Custom Tax Calendar)',
+        '판정된 사업자 유형에 맞춰 반드시 챙겨야 할 신고 기간과 국세청 홈택스 메뉴 경로입니다.': 'Tailored filing deadlines and exact HomeTax menu paths for your classified tax status.',
+        '이미지 닫기': 'Close Image',
+        '추출 숫자 적용할 칸:': 'Apply number to:'
+      };
+
+      var NUMERIC_IDS = [
+        'tax-grossSales', 'tax-cogsTotal', 'tax-platformFeeTotal',
+        'tax-shippingCostTotal', 'tax-adSpendTotal', 'tax-otherExpenseTotal',
+        'tax-cardSalesRatio', 'tax-nonQualifiedExpenseRatio',
+        'tax-dependentsCount', 'tax-extraDeduction'
+      ];
+
+      function fieldIdToProp(id) {
+        return id.replace(/^tax-/, '');
+      }
+
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.hidden = false;
+        clearTimeout(showToast._timer);
+        showToast._timer = setTimeout(function () {
+          toastEl.hidden = true;
+        }, 3500);
+      }
+
+      function writeFormData(data) {
+        document.getElementById('tax-periodMode').value = data.periodMode || 'annual';
+        document.getElementById('tax-industryKey').value = data.industryKey || 'retail_ecommerce';
+        document.getElementById('tax-taxpayerOverride').value = data.taxpayerOverride || 'auto';
+        document.getElementById('tax-isNewBusiness').checked = Boolean(data.isNewBusiness);
+        document.getElementById('tax-priorYearGrossSales').value =
+          data.priorYearGrossSales !== null && typeof data.priorYearGrossSales !== 'undefined'
+            ? String(data.priorYearGrossSales)
+            : '';
+
+        NUMERIC_IDS.forEach(function (id) {
+          var prop = fieldIdToProp(id);
+          document.getElementById(id).value = typeof data[prop] === 'number' ? data[prop] : 0;
+        });
+        document.getElementById('tax-useDoubleEntryCredit').checked = Boolean(data.useDoubleEntryCredit);
+        document.getElementById('tax-includeEFilingCredit').checked =
+          typeof data.includeEFilingCredit === 'boolean' ? data.includeEFilingCredit : true;
+      }
+
+      function readFormData() {
+        var priorStr = document.getElementById('tax-priorYearGrossSales').value.trim();
+        var obj = {
+          periodMode: document.getElementById('tax-periodMode').value,
+          industryKey: document.getElementById('tax-industryKey').value,
+          taxpayerOverride: document.getElementById('tax-taxpayerOverride').value,
+          isNewBusiness: document.getElementById('tax-isNewBusiness').checked,
+          priorYearGrossSales: priorStr === '' ? null : Number(priorStr),
+          useDoubleEntryCredit: document.getElementById('tax-useDoubleEntryCredit').checked,
+          includeEFilingCredit: document.getElementById('tax-includeEFilingCredit').checked
+        };
+        NUMERIC_IDS.forEach(function (id) {
+          obj[fieldIdToProp(id)] = document.getElementById(id).value;
+        });
+        return obj;
+      }
+
+      function applyPreset(preset) {
+        writeFormData(preset);
+        renderTaxDiagnosis();
+      }
+
+      function syncFromProfitCalculator() {
+        var base = SM.loadSharedInputs();
+        var res = SM.calculateProfit(base);
+        var annualMultiplier = Math.max(1, res.monthlyUnits) * 12;
+        var override = base.taxpayerType === 'general' ? 'auto' : base.taxpayerType === 'exempt' ? 'exempt' : 'auto';
+        applyPreset({
+          periodMode: 'annual',
+          industryKey: 'retail_ecommerce',
+          taxpayerOverride: override,
+          isNewBusiness: false,
+          priorYearGrossSales: null,
+          grossSales: Math.round(res.totalGrossRevenueInput * annualMultiplier),
+          cogsTotal: Math.round(res.inputs.cogs * annualMultiplier),
+          platformFeeTotal: Math.round(res.feeTotalInput * annualMultiplier),
+          shippingCostTotal: Math.round(res.inputs.sellerShippingCost * annualMultiplier),
+          adSpendTotal: Math.round(res.inputs.adSpend * annualMultiplier),
+          otherExpenseTotal: 0,
+          cardSalesRatio: 95,
+          nonQualifiedExpenseRatio: res.inputs.cogsVatDeductible ? 0 : 25,
+          dependentsCount: 1,
+          extraDeduction: 0,
+          useDoubleEntryCredit: false,
+          includeEFilingCredit: true
+        });
+        showToast(SM.t('순이익 계산기의 월간 판매량을 12개월 연환산해 불러왔습니다.', 'Loaded Profit Calculator annualized ×12 figures.'));
+      }
+
+      function makeReceiptRow(label, valueText, cls) {
+        var li = SM.createEl('li', 'waterfall-row' + (cls ? ' ' + cls : ''));
+        li.appendChild(SM.createEl('span', 'wf-label', label));
+        li.appendChild(SM.createEl('span', 'wf-value', valueText));
+        return li;
+      }
+
+      function renderTaxDiagnosis() {
+        var res = SM.calculateKoreanTax(readFormData());
+        lastTaxResult = res;
+
+        // 1. 과세 판정 배너
+        SM.clearEl(verdictBox);
+        var verdictTone = res.classification.determinedType === 'simplified_exempt' || res.classification.determinedType === 'exempt'
+          ? ' is-exempt'
+          : res.classification.determinedType === 'general'
+          ? ' is-alert'
+          : '';
+        var vCard = SM.createEl('div', 'tax-verdict-card' + verdictTone);
+        vCard.appendChild(
+          SM.createEl(
+            'div',
+            'tax-verdict-eyebrow',
+            SM.t(
+              '과세유형 판정 · 연환산 매출 ' + SM.formatCurrency(res.summary.annualGrossSales),
+              'Classification · Annualized Sales ' + SM.formatCurrency(res.summary.annualGrossSales)
+            )
+          )
+        );
+        vCard.appendChild(SM.createEl('h3', 'tax-verdict-title', res.classification.title));
+        vCard.appendChild(SM.createEl('p', 'tax-verdict-sub', res.classification.subtitle));
+
+        var metaDiv = SM.createEl('div', 'tax-verdict-meta');
+        metaDiv.appendChild(SM.createEl('div', '', SM.t('📘 적용 법령: ', '📘 Legal Basis: ') + res.classification.legalBasis));
+        metaDiv.appendChild(SM.createEl('div', '', SM.t('🧾 세금계산서 의무: ', '🧾 Invoice Rule: ') + res.classification.invoiceDutyText));
+        metaDiv.appendChild(SM.createEl('div', '', SM.t('📒 종합소득세 기장의무: ', '📒 Bookkeeping Duty: ') + res.incomeTax.bookkeepingLabel));
+        metaDiv.appendChild(SM.createEl('div', '', SM.t('🔔 전환/신고 유의: ', '🔔 Key Alert: ') + res.classification.conversionAlertText));
+        vCard.appendChild(metaDiv);
+        verdictBox.appendChild(vCard);
+
+        // 2. 매출 기준선 게이지 바
+        SM.clearEl(thresholdBox);
+        var mWrap = SM.createEl('div', 'threshold-meter-wrap');
+        var mHead = SM.createEl('div', 'threshold-header-row');
+        mHead.appendChild(SM.createEl('span', '', SM.t('대한민국 세법 매출 기준선 위치 (최대 3억 원 복식부기 기준 시각화)', 'Revenue Position vs Korean Statutory Tax Thresholds')));
+        mHead.appendChild(SM.createEl('span', 'tax-num', SM.t('연환산 ', 'Annualized ') + SM.formatCurrency(res.summary.annualGrossSales)));
+        mWrap.appendChild(mHead);
+
+        var bar = SM.createEl('div', 'threshold-bar');
+        var pct = Math.min(100, Math.round((res.summary.annualGrossSales / Math.max(300000000, res.classification.thresholds.doubleEntryLimit)) * 100));
+        var fill = SM.createEl('div', 'threshold-fill');
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
+        mWrap.appendChild(bar);
+
+        var ms = SM.createEl('div', 'threshold-milestones');
+        [
+          { cap: SM.t('4,800만 원', '48M KRW'), desc: SM.t('간이 부가세 면제선', 'VAT Pay Exempt') },
+          { cap: SM.t(SM.formatNumber(Math.round(res.classification.thresholds.simpleExpenseContLimit / 10000)) + '만 원', 'Simple Exp Limit'), desc: SM.t('계속사업 단순경비율선', 'Simple Rate Limit') },
+          { cap: SM.t('1억 400만 원', '104M KRW'), desc: SM.t('일반과세 전환 기준', 'General VAT Limit') },
+          { cap: SM.t(SM.formatNumber(Math.round(res.classification.thresholds.doubleEntryLimit / 100000000 * 10) / 10) + '억 원', 'Double-Entry'), desc: SM.t('복식부기 의무 기준', 'Double-Entry Obligor') }
+        ].forEach(function (item) {
+          var box = SM.createEl('div');
+          box.appendChild(SM.createEl('strong', '', item.cap));
+          box.appendChild(document.createTextNode(item.desc));
+          ms.appendChild(box);
+        });
+        mWrap.appendChild(ms);
+        thresholdBox.appendChild(mWrap);
+
+        // 3. 핵심 세무 KPI 4종
+        SM.clearEl(kpiGrid);
+        var vatValueText = res.vat.isRefund
+          ? SM.formatCurrency(Math.abs(res.summary.annualVatPayable)) + SM.t(' 환급', ' Refund')
+          : SM.formatCurrency(res.summary.annualVatPayable);
+
+        var kpis = [
+          {
+            label: SM.t('연간 예상 부가가치세', 'Est. Annual VAT'),
+            value: vatValueText,
+            sub: res.vat.exemptApplied
+              ? SM.t('4,800만 원 미만 면제 (0원)', 'Exempt < 48M KRW (0 KRW)')
+              : res.classification.taxpayerType === 'general'
+              ? SM.t('카드 1.3% 등 반영 · 반기 약 ', 'Incl. 1.3% credit · Half-yr ') + SM.formatCurrency(Math.abs(res.vat.semiAnnualVat))
+              : res.classification.taxpayerType === 'exempt'
+              ? SM.t('부가세 면세사업자 (0원)', 'VAT-Exempt Business')
+              : SM.t('간이과세 연 1회 1월 신고분', 'Annual Simplified Return (Jan)'),
+            cls: res.vat.isRefund ? 'kpi-positive' : 'kpi-highlight'
+          },
+          {
+            label: SM.t('연간 종합소득세 + 지방소득세', 'Annual Income + Local Tax'),
+            value: SM.formatCurrency(res.summary.annualIncomeTaxTotal),
+            sub: SM.t(
+              '적용 최고세율 ' + res.incomeTax.actualBook.bracketRate + '% · 과세표준 ' + SM.formatCurrency(res.incomeTax.actualBook.taxBase),
+              'Bracket ' + res.incomeTax.actualBook.bracketRate + '% · Tax Base ' + SM.formatCurrency(res.incomeTax.actualBook.taxBase)
+            ),
+            cls: ''
+          },
+          {
+            label: SM.t('모든 세금 뺀 세후 실질 순이익', 'After-Tax Net Profit'),
+            value: SM.formatCurrency(res.summary.afterTaxNetProfit),
+            sub: SM.t(
+              '매출 대비 총 세율 ' + SM.formatPercent(res.summary.effectiveTaxRateOnSales),
+              'Effective Tax on Sales ' + SM.formatPercent(res.summary.effectiveTaxRateOnSales)
+            ),
+            cls: res.summary.afterTaxNetProfit >= 0 ? 'kpi-positive' : 'kpi-negative'
+          },
+          {
+            label: SM.t('매월 세금 통장 권장 적립액', 'Recommended Monthly Tax Reserve'),
+            value: SM.formatCurrency(res.summary.monthlyTaxReserve),
+            sub: SM.t('부가세 + 종소세 ÷ 12개월 분리 보관', '(Annual VAT + Income Tax) ÷ 12'),
+            cls: 'kpi-highlight'
+          }
+        ];
+
+        kpis.forEach(function (k) {
+          var card = SM.createEl('div', 'kpi-card ' + k.cls);
+          card.appendChild(SM.createEl('span', 'kpi-label', k.label));
+          card.appendChild(SM.createEl('strong', 'kpi-value', k.value));
+          card.appendChild(SM.createEl('span', 'kpi-sub', k.sub));
+          kpiGrid.appendChild(card);
+        });
+
+        // 4. 부가세(일반 vs 간이) & 종소세(장부 vs 경비율) 비교 카드
+        SM.clearEl(compBox);
+        var vatCard = SM.createEl('div', 'tax-comp-card');
+        vatCard.appendChild(SM.createEl('h3', '', SM.t('① 부가가치세 상세 내역 & 일반 vs 간이 비교', '1. VAT Breakdown & General vs Simplified')));
+        var vatList = SM.createEl('ul', 'waterfall-list');
+        vatList.appendChild(makeReceiptRow(SM.t('연간 매출세액', 'Output VAT'), SM.formatCurrency(res.vat.outputVat), ''));
+        vatList.appendChild(makeReceiptRow(SM.t('적격증빙 매입세액 공제', 'Input VAT Credit'), '-' + SM.formatCurrency(res.vat.inputVatCredit), 'row-plus'));
+        vatList.appendChild(
+          makeReceiptRow(
+            res.vat.cardCreditEligibleOwner ? SM.t('신용카드·PG 발행세액공제 (1.3%)', 'Card / PG Issuance Credit (1.3%)') : SM.t('카드발행세액공제 (직전 10억 초과 제외)', 'Card Credit (Excluded >1B Prior Supply)'),
+            '-' + SM.formatCurrency(res.vat.cardIssuanceCredit),
+            'row-plus'
+          )
+        );
+        vatList.appendChild(makeReceiptRow(SM.t('전자신고 세액공제', 'HomeTax e-Filing Credit'), '-' + SM.formatCurrency(res.vat.eFilingCredit), 'row-plus'));
+        vatList.appendChild(
+          makeReceiptRow(
+            SM.t('최종 연간 예상 부가가치세', 'Final Annual VAT'),
+            vatValueText,
+            'row-subtotal ' + (res.vat.isRefund ? 'row-plus' : 'row-minus')
+          )
+        );
+        vatList.appendChild(makeReceiptRow(SM.t('[비교] 일반과세 선택 시', '[Compare] If General VAT'), SM.formatCurrency(res.vat.comparison.generalVat), ''));
+        vatList.appendChild(makeReceiptRow(SM.t('[비교] 간이과세 적용 시', '[Compare] If Simplified VAT'), SM.formatCurrency(res.vat.comparison.simplifiedVat), ''));
+        vatCard.appendChild(vatList);
+        vatCard.appendChild(SM.createEl('div', 'tax-comp-note', res.vat.comparison.note));
+        compBox.appendChild(vatCard);
+
+        var incCard = SM.createEl('div', 'tax-comp-card');
+        incCard.appendChild(SM.createEl('h3', '', SM.t('② 종합소득세: 실제 장부 vs 국세청 경비율 비교', '2. Income Tax: Actual Books vs Expense Rate')));
+        var incList = SM.createEl('ul', 'waterfall-list');
+        incList.appendChild(makeReceiptRow(SM.t('총수입금액 (과세매출 기준)', 'Taxable Business Revenue'), SM.formatCurrency(res.incomeTax.actualBook.revenueSupply), ''));
+        incList.appendChild(makeReceiptRow(SM.t('장부상 인정 필요경비', 'Actual Deductible Expenses'), '-' + SM.formatCurrency(res.incomeTax.actualBook.deductibleExpenses), 'row-minus'));
+        incList.appendChild(makeReceiptRow(SM.t('장부 사업소득금액', 'Actual Business Income'), SM.formatCurrency(res.incomeTax.actualBook.businessIncome), 'row-subtotal'));
+        incList.appendChild(
+          makeReceiptRow(
+            SM.t('기본·추가 소득공제 (' + res.inputs.dependentsCount + '명)', 'Personal & Extra Deductions'),
+            '-' + SM.formatCurrency(res.incomeTax.actualBook.personalDeduction + res.incomeTax.actualBook.extraDeduction),
+            'row-plus'
+          )
+        );
+        incList.appendChild(
+          makeReceiptRow(
+            SM.t('장부기장 총 세액 (종소세+지방세 10%)', 'Actual Books Total Income Tax'),
+            SM.formatCurrency(res.incomeTax.actualBook.totalIncomeTax),
+            'row-subtotal ' + (res.incomeTax.actualBook.hasLoss ? 'row-plus' : 'row-minus')
+          )
+        );
+        incList.appendChild(
+          makeReceiptRow(
+            SM.t('추계신고 (' + res.incomeTax.estimatedRate.methodLabel + ')', 'Estimated (' + res.incomeTax.estimatedRate.methodLabel + ')'),
+            SM.formatCurrency(res.incomeTax.estimatedRate.totalIncomeTax),
+            ''
+          )
+        );
+        incCard.appendChild(incList);
+        incCard.appendChild(SM.createEl('div', 'tax-comp-note', res.incomeTax.recommendedMethodText + ' ' + res.incomeTax.estimatedRate.warningText));
+        compBox.appendChild(incCard);
+
+        // 5. 대한민국 8단계 종합소득세 누진세율표
+        SM.clearEl(bracketBox);
+        var bWrap = SM.createEl('div', 'table-responsive');
+        var bTable = SM.createEl('table', 'data-table tax-bracket-table');
+        var bHead = SM.createEl('thead');
+        var bTr = SM.createEl('tr');
+        [
+          SM.t('과세표준 구간', 'Taxable Base Bracket'),
+          SM.t('기본 세율', 'Marginal Rate'),
+          SM.t('누진공제액', 'Progressive Deduction'),
+          SM.t('해당 여부', 'Status')
+        ].forEach(function (h) {
+          bTr.appendChild(SM.createEl('th', '', h));
+        });
+        bHead.appendChild(bTr);
+        bTable.appendChild(bHead);
+
+        var bBody = SM.createEl('tbody');
+        SM.KOREAN_INCOME_TAX_BRACKETS.forEach(function (br, idx) {
+          var isActive = idx === res.incomeTax.actualBook.bracketIndex;
+          var tr = SM.createEl('tr', isActive ? 'is-current-bracket' : '');
+          tr.appendChild(SM.createEl('td', '', SM.getLang() === 'en' ? br.labelEn : br.labelKo));
+          tr.appendChild(SM.createEl('td', '', Math.round(br.rate * 100) + '%'));
+          tr.appendChild(SM.createEl('td', '', SM.formatCurrency(br.deduction)));
+          tr.appendChild(
+            SM.createEl(
+              'td',
+              '',
+              isActive
+                ? res.incomeTax.actualBook.hasLoss
+                  ? SM.t('적자 (세액 0원 · 이월결손)', 'Loss (0 Tax)')
+                  : SM.t('👈 현재 내 구간', '👈 Your Active Bracket')
+                : '-'
+            )
+          );
+          bBody.appendChild(tr);
+        });
+        bTable.appendChild(bBody);
+        bWrap.appendChild(bTable);
+        bracketBox.appendChild(bWrap);
+
+        // 6. 신고 일정 캘린더 & 절세 체크리스트
+        SM.clearEl(scheduleBox);
+        var fGrid = SM.createEl('div', 'filing-timeline-grid');
+        res.filingSchedule.forEach(function (item) {
+          var fCard = SM.createEl('div', 'filing-card' + (item.highlight ? ' is-priority' : ''));
+          fCard.appendChild(SM.createEl('span', 'filing-period-badge', item.period));
+          fCard.appendChild(SM.createEl('h3', '', item.title));
+          fCard.appendChild(SM.createEl('p', '', item.target));
+          fCard.appendChild(SM.createEl('div', 'filing-hometax-path', item.hometaxPath));
+          fGrid.appendChild(fCard);
+        });
+        scheduleBox.appendChild(fGrid);
+
+        var chkBox = SM.createEl('div', 'tax-checklist-box');
+        chkBox.appendChild(SM.createEl('h3', '', SM.t('📌 세무사 기준 실전 신고·절세 체크리스트', '📌 Practical Tax & Filing Checklist')));
+        var ul = SM.createEl('ul');
+        res.checklists.forEach(function (txt) {
+          ul.appendChild(SM.createEl('li', '', txt));
+        });
+        chkBox.appendChild(ul);
+        scheduleBox.appendChild(chkBox);
+      }
+
+      // 이미지 업로드 / Ctrl+V 붙여넣기 핸들러 (100% 브라우저 로컬)
+      function loadImageFile(file) {
+        if (!file || !file.type || file.type.indexOf('image/') !== 0) return;
+        if (currentObjectUrl) {
+          URL.revokeObjectURL(currentObjectUrl);
+        }
+        currentObjectUrl = URL.createObjectURL(file);
+        previewImg.src = currentObjectUrl;
+        screenshotFilename.textContent = file.name || SM.t('붙여넣은 정산 캡처 화면', 'Pasted Screenshot');
+        viewerWrap.hidden = false;
+
+        SM.clearEl(ocrChipRow);
+        ocrChipsWrap.hidden = true;
+
+        if (typeof window.TextDetector === 'function') {
+          ocrStatusMsg.textContent = SM.t('브라우저 내장 문자 인식(무료 로컬)으로 금액 숫자를 찾는 중...', 'Running free browser-local TextDetector...');
+          var detector = new window.TextDetector();
+          var imgObj = new Image();
+          imgObj.onload = function () {
+            detector.detect(imgObj).then(
+              function (blocks) {
+                var joined = blocks.map(function (b) { return b.rawValue || ''; }).join(' ');
+                var matches = joined.match(/\d{1,3}(?:,\d{3})+|\d{5,}/g) || [];
+                var uniqueNums = [];
+                matches.forEach(function (m) {
+                  var num = Number(m.replace(/,/g, ''));
+                  if (Number.isFinite(num) && num >= 100 && uniqueNums.indexOf(num) === -1) {
+                    uniqueNums.push(num);
+                  }
+                });
+                if (uniqueNums.length > 0) {
+                  ocrStatusMsg.textContent = SM.t(
+                    '캡처에서 추출된 금액 칩을 클릭하면 선택한 입력칸에 바로 채워집니다:',
+                    'Click any extracted number chip to apply it to the selected field:'
+                  );
+                  uniqueNums.slice(0, 10).forEach(function (num) {
+                    var chip = SM.createEl('button', 'ocr-chip', SM.formatNumber(num) + '원');
+                    chip.type = 'button';
+                    chip.addEventListener('click', function () {
+                      var targetId = 'tax-' + ocrTargetField.value;
+                      var el = document.getElementById(targetId);
+                      if (el) {
+                        el.value = num;
+                        renderTaxDiagnosis();
+                        showToast(SM.formatCurrency(num) + SM.t(' 값을 입력칸에 적용했습니다.', ' applied to selected field.'));
+                      }
+                    });
+                    ocrChipRow.appendChild(chip);
+                  });
+                  ocrChipsWrap.hidden = false;
+                } else {
+                  ocrStatusMsg.textContent = SM.t(
+                    '캡처 이미지에서 숫자가 자동으로 인식되지 않았습니다. 아래 이미지를 보며 왼쪽 칸에 입력하고 기간(1개월×12)을 선택해 주세요.',
+                    'No numbers detected automatically. Compare the preview below and enter values in Step 2.'
+                  );
+                }
+              },
+              function () {
+                ocrStatusMsg.textContent = SM.t(
+                  '이미지를 옆에 띄워두고 왼쪽 입력칸에 금액을 입력해 주세요. (월 정산 캡처면 기간에서 1개월×12 선택)',
+                  'Preview loaded. Compare and enter totals into Step 2 (select 1-Month ×12 if monthly).'
+                );
+              }
+            );
+          };
+          imgObj.src = currentObjectUrl;
+        } else {
+          ocrStatusMsg.textContent = SM.t(
+            '캡처 이미지를 100% 브라우저 내부에 표시했습니다(서버 전송 0%). 위 사진을 대조해 왼쪽 칸에 금액을 입력한 뒤 [기준 기간: 1개월 ×12]를 선택하면 바로 세무 진단이 완료됩니다.',
+            'Screenshot loaded 100% locally. Compare values into Step 2 (choose 1-Month ×12 for monthly payouts).'
+          );
+        }
+      }
+
+      imageInput.addEventListener('change', function (e) {
+        if (e.target.files && e.target.files[0]) loadImageFile(e.target.files[0]);
+      });
+
+      imgDropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        imgDropzone.classList.add('is-dragover');
+      });
+      imgDropzone.addEventListener('dragleave', function () {
+        imgDropzone.classList.remove('is-dragover');
+      });
+      imgDropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        imgDropzone.classList.remove('is-dragover');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadImageFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      document.addEventListener('paste', function (e) {
+        var items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type && items[i].type.indexOf('image/') === 0) {
+            var blob = items[i].getAsFile();
+            if (blob) {
+              loadImageFile(blob);
+              e.preventDefault();
+              break;
+            }
+          }
+        }
+      });
+
+      document.getElementById('btn-clear-image').addEventListener('click', function () {
+        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = null;
+        previewImg.removeAttribute('src');
+        viewerWrap.hidden = true;
+      });
+
+      // 엑셀 파일 업로드 -> 전 품목 세무 합산 자동 적용
+      function loadTaxExcelFile(file) {
+        if (!file) return;
+        SM.parseSpreadsheetFile(file).then(
+          function (rows) {
+            if (!rows || rows.length < 2) {
+              excelStatus.textContent = SM.t('머리글(1행)과 1개 이상의 데이터 행이 필요합니다.', 'Need header row + at least 1 data row.');
+              excelStatus.hidden = false;
+              return;
+            }
+            var bestIdx = 0;
+            var bestMap = SM.detectColumnMapping(rows[0]);
+            var bestScore = Object.keys(bestMap).filter(function (k) { return bestMap[k] >= 0; }).length;
+            for (var r = 1; r < Math.min(rows.length, 5); r++) {
+              var m = SM.detectColumnMapping(rows[r]);
+              var sc = Object.keys(m).filter(function (k) { return m[k] >= 0; }).length;
+              if (sc > bestScore) {
+                bestScore = sc;
+                bestIdx = r;
+                bestMap = m;
+              }
+            }
+            var zeroBase = Object.assign(SM.cloneDefaults(), {
+              sellerDiscount: 0,
+              platformDiscount: 0,
+              customerShipping: 0,
+              sellerShippingCost: 0,
+              adSpend: 0,
+              feeRate: 0
+            });
+            var batch = SM.computeBatchRows(rows.slice(bestIdx + 1), bestMap, zeroBase);
+            var sumSales = 0;
+            var sumCogs = 0;
+            var sumFees = 0;
+            var sumShip = 0;
+            var sumAd = 0;
+            batch.rows.forEach(function (item) {
+              sumSales += item.totalCustomerPayment + item.inputs.customerShipping * item.quantity;
+              sumCogs += item.inputs.cogs * item.quantity;
+              sumFees += item.profit.feeTotalInput * item.quantity;
+              sumShip += item.inputs.sellerShippingCost * item.quantity;
+              sumAd += item.inputs.adSpend * item.quantity;
+            });
+
+            var cur = readFormData();
+            cur.grossSales = Math.round(sumSales);
+            cur.cogsTotal = Math.round(sumCogs);
+            cur.platformFeeTotal = Math.round(sumFees);
+            cur.shippingCostTotal = Math.round(sumShip);
+            cur.adSpendTotal = Math.round(sumAd);
+            writeFormData(cur);
+            renderTaxDiagnosis();
+
+            excelStatus.textContent = SM.t(
+              '✓ "' + file.name + '" ' + batch.summary.skuCount + '개 품목(' + SM.formatNumber(batch.summary.totalUnits) + '건) 합계 ' + SM.formatCurrency(sumSales) + ' 반영 완료',
+              '✓ Loaded "' + file.name + '" (' + batch.summary.skuCount + ' SKUs, ' + SM.formatCurrency(sumSales) + ')'
+            );
+            excelStatus.hidden = false;
+          },
+          function (err) {
+            excelStatus.textContent = (err && err.message) || SM.t('엑셀 파일을 읽지 못했습니다.', 'Failed to read spreadsheet file.');
+            excelStatus.hidden = false;
+          }
+        );
+      }
+
+      excelInput.addEventListener('change', function (e) {
+        if (e.target.files && e.target.files[0]) loadTaxExcelFile(e.target.files[0]);
+      });
+      excelDropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        excelDropzone.classList.add('is-dragover');
+      });
+      excelDropzone.addEventListener('dragleave', function () {
+        excelDropzone.classList.remove('is-dragover');
+      });
+      excelDropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        excelDropzone.classList.remove('is-dragover');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadTaxExcelFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      var PRESET_36M = {
+        periodMode: 'annual', industryKey: 'retail_ecommerce', taxpayerOverride: 'auto',
+        isNewBusiness: false, priorYearGrossSales: null,
+        grossSales: 36000000, cogsTotal: 15000000, platformFeeTotal: 2100000,
+        shippingCostTotal: 3600000, adSpendTotal: 2500000, otherExpenseTotal: 600000,
+        cardSalesRatio: 95, nonQualifiedExpenseRatio: 0, dependentsCount: 1, extraDeduction: 0,
+        useDoubleEntryCredit: false, includeEFilingCredit: true
+      };
+      var PRESET_84M = {
+        periodMode: 'annual', industryKey: 'retail_ecommerce', taxpayerOverride: 'auto',
+        isNewBusiness: false, priorYearGrossSales: null,
+        grossSales: 84000000, cogsTotal: 35000000, platformFeeTotal: 5200000,
+        shippingCostTotal: 8400000, adSpendTotal: 9000000, otherExpenseTotal: 2400000,
+        cardSalesRatio: 95, nonQualifiedExpenseRatio: 0, dependentsCount: 1, extraDeduction: 0,
+        useDoubleEntryCredit: false, includeEFilingCredit: true
+      };
+      var PRESET_150M = {
+        periodMode: 'annual', industryKey: 'retail_ecommerce', taxpayerOverride: 'auto',
+        isNewBusiness: false, priorYearGrossSales: null,
+        grossSales: 150000000, cogsTotal: 64000000, platformFeeTotal: 10500000,
+        shippingCostTotal: 15000000, adSpendTotal: 18000000, otherExpenseTotal: 4500000,
+        cardSalesRatio: 95, nonQualifiedExpenseRatio: 0, dependentsCount: 1, extraDeduction: 0,
+        useDoubleEntryCredit: false, includeEFilingCredit: true
+      };
+      var PRESET_450M = {
+        periodMode: 'annual', industryKey: 'retail_ecommerce', taxpayerOverride: 'auto',
+        isNewBusiness: false, priorYearGrossSales: null,
+        grossSales: 450000000, cogsTotal: 195000000, platformFeeTotal: 36000000,
+        shippingCostTotal: 42000000, adSpendTotal: 55000000, otherExpenseTotal: 24000000,
+        cardSalesRatio: 95, nonQualifiedExpenseRatio: 0, dependentsCount: 2, extraDeduction: 3000000,
+        useDoubleEntryCredit: false, includeEFilingCredit: true
+      };
+
+      document.getElementById('btn-sync-profit-calc').addEventListener('click', syncFromProfitCalculator);
+      document.getElementById('btn-preset-36m').addEventListener('click', function () { applyPreset(PRESET_36M); });
+      document.getElementById('btn-preset-84m').addEventListener('click', function () { applyPreset(PRESET_84M); });
+      document.getElementById('btn-preset-150m').addEventListener('click', function () { applyPreset(PRESET_150M); });
+      document.getElementById('btn-preset-450m').addEventListener('click', function () { applyPreset(PRESET_450M); });
+      document.getElementById('btn-reset-tax').addEventListener('click', function () { applyPreset(PRESET_84M); });
+
+      form.addEventListener('input', renderTaxDiagnosis);
+      form.addEventListener('change', renderTaxDiagnosis);
+
+      document.getElementById('btn-copy-tax-summary').addEventListener('click', function () {
+        if (!lastTaxResult) return;
+        var r = lastTaxResult;
+        var lines = [
+          SM.t('[SELLER MATH 대한민국 세무·과세 진단 요약]', '[SELLER MATH Korean Tax Summary]'),
+          SM.t('판정 과세유형: ', 'Taxpayer Status: ') + r.classification.title,
+          SM.t('기장의무: ', 'Bookkeeping Duty: ') + r.incomeTax.bookkeepingLabel,
+          SM.t('연환산 매출: ', 'Annualized Sales: ') + SM.formatCurrency(r.summary.annualGrossSales),
+          SM.t('예상 연간 부가가치세: ', 'Est. Annual VAT: ') + (r.vat.isRefund ? SM.formatCurrency(Math.abs(r.summary.annualVatPayable)) + ' 환급' : SM.formatCurrency(r.summary.annualVatPayable)),
+          SM.t('예상 종합소득세+지방소득세: ', 'Est. Income + Local Tax: ') + SM.formatCurrency(r.summary.annualIncomeTaxTotal),
+          SM.t('세후 실수령 순이익: ', 'After-Tax Net Profit: ') + SM.formatCurrency(r.summary.afterTaxNetProfit),
+          SM.t('월 권장 세금 적립액: ', 'Monthly Tax Reserve: ') + SM.formatCurrency(r.summary.monthlyTaxReserve)
+        ].join('\n');
+
+        SM.copyTextToClipboard(lines).then(function (ok) {
+          showToast(
+            ok
+              ? SM.t('세무 진단 요약을 클립보드에 복사했습니다.', 'Tax diagnosis summary copied to clipboard.')
+              : SM.t('클립보드 복사에 실패했습니다.', 'Copy failed.')
+          );
+        });
+      });
+
+      document.getElementById('btn-print-tax').addEventListener('click', function () {
+        window.print();
+      });
+
+      SM.initI18n(PAGE_DICT, 'Korean Seller Tax, VAT & Filing Guide | SELLER MATH');
+      window.addEventListener('sellermath:langchange', renderTaxDiagnosis);
+
+      if (window.location && window.location.search && window.location.search.indexOf('from=profit') !== -1) {
+        syncFromProfitCalculator();
+      } else {
+        writeFormData(PRESET_84M);
+        renderTaxDiagnosis();
+      }
+    })();
+  </script>
+</body>
+</html>
