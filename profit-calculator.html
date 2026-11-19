@@ -105,6 +105,7 @@
                 <label for="cogs">상품 매입 원가 COGS (원)</label>
                 <input id="cogs" name="cogs" type="number" min="0" step="10" class="input-control">
               </div>
+              <div id="market-preset-container"></div>
               <div class="field">
                 <label for="feeBasisMode">수수료 부과 기준</label>
                 <select id="feeBasisMode" name="feeBasisMode" class="select-control">
@@ -254,6 +255,8 @@
           <div class="btn-row" style="margin-top: 16px;">
             <button type="button" class="btn btn-primary" id="btn-save-scenario">시나리오 비교함에 저장</button>
             <button type="button" class="btn btn-outline" id="btn-copy-summary">계산 요약 복사</button>
+            <button type="button" class="btn btn-outline" id="btn-share-url">계산 링크 복사</button>
+            <button type="button" class="btn btn-secondary" id="btn-download-png">리포트 이미지(PNG) 저장</button>
             <button type="button" class="btn btn-ghost" id="btn-print-page">인쇄 / PDF 저장</button>
           </div>
           <div id="action-toast" class="toast-msg" aria-live="polite"></div>
@@ -283,6 +286,11 @@
           </section>
         </div>
       </div>
+
+      <!-- 4-탭 셀러 실전 확장 워크벤치 -->
+      <section class="card" aria-label="셀러 실전 확장 시뮬레이터">
+        <div id="seller-workbench-container"></div>
+      </section>
 
       <!-- 엑셀(.xlsx/.csv) & 표 붙여넣기 일괄 계산기 -->
       <section class="card" aria-label="엑셀 파일 일괄 계산기">
@@ -675,6 +683,12 @@
 
         // 2-Stage Waterfall Breakdown
         SM.renderWaterfallBreakdown(waterfallContainer, res);
+        if (typeof marketPresetsCtrl !== 'undefined' && marketPresetsCtrl) {
+          marketPresetsCtrl.syncActiveByInputs(inp);
+        }
+        if (typeof sellerWorkbenchCtrl !== 'undefined' && sellerWorkbenchCtrl) {
+          sellerWorkbenchCtrl.recalculate();
+        }
       }
 
       function refreshScenarios() {
@@ -773,9 +787,98 @@
         });
       });
 
+      document.getElementById('btn-share-url').addEventListener('click', function () {
+        var inp = readInputsFromForm();
+        var url = SM.buildShareUrl(inp);
+        SM.copyTextToClipboard(url).then(function (ok) {
+          showToast(
+            ok
+              ? SM.t('입력 조건이 담긴 공유 링크를 복사했습니다. 카톡 등에 붙여넣으세요.', 'Shareable calculation link copied to clipboard.')
+              : SM.t('링크 복사에 실패했습니다.', 'Failed to copy link.')
+          );
+        });
+      });
+
+      document.getElementById('btn-download-png').addEventListener('click', function () {
+        if (!lastResult) return;
+        var r = lastResult;
+        var ok = SM.downloadReportCardPng({
+          filename: 'seller-math-profit-' + new Date().toISOString().slice(0, 10),
+          title: (r.inputs.itemName || SM.t('상품 손익 리포트', 'Product P&L Report')),
+          subtitle: r.accountingBasisLabel + ' · ' + r.feeBasisLabel,
+          kpis: [
+            { label: SM.t('플랫폼 정산 예정액', 'Est. Platform Payout'), value: SM.formatCurrency(r.platformSettlement), sub: SM.t('고객 결제가 ', 'Paid ') + SM.formatCurrency(r.customerPayment), tone: 'highlight' },
+            { label: SM.t('광고 전 공헌이익(C)', 'Pre-Ad Contribution'), value: SM.formatCurrency(r.contributionMargin), sub: SM.t('공헌율 ', 'Margin ') + r.contributionMarginLabel, tone: '' },
+            { label: SM.t('건당 영업 추정 이익', 'Est. Operating Profit'), value: SM.formatCurrency(r.operatingProfit), sub: SM.t('순마진율 ', 'Net ') + r.netMarginLabel, tone: r.operatingProfit >= 0 ? 'positive' : 'negative' },
+            { label: SM.t('월간 예상 순이익', 'Est. Monthly Profit'), value: SM.formatCurrency(r.monthlyOperatingProfit), sub: SM.formatNumber(r.monthlyUnits) + SM.t('건/월 기준', ' units/mo'), tone: r.monthlyOperatingProfit >= 0 ? 'positive' : 'negative' }
+          ],
+          rows: [
+            { label: SM.t('등록 정가 / 실결제가', 'List / Customer Price'), value: SM.formatCurrency(r.listPrice) + ' / ' + SM.formatCurrency(r.customerPayment) },
+            { label: SM.t('마켓 수수료 합계 (' + r.inputs.feeRate + '%)', 'Marketplace Fee'), value: '-' + SM.formatCurrency(r.feeVat.cash), tone: 'negative' },
+            { label: SM.t('상품 원가 + 택배원가', 'COGS + Shipping'), value: '-' + SM.formatCurrency(r.recognizedCogs + r.recognizedShipping), tone: 'negative' },
+            { label: SM.t('건당 광고비 지출', 'Ad Spend per Order'), value: '-' + SM.formatCurrency(r.recognizedAdSpend), tone: 'negative' },
+            { label: SM.t('참고 부가세 (' + r.taxEstimate.taxpayerLabel + ')', 'Est. VAT Ref.'), value: r.taxEstimate.displayAmount },
+            { label: SM.t('최종 건당 영업 추정 이익 (순마진율)', 'Final Operating Profit (Margin)'), value: SM.formatCurrency(r.operatingProfit) + ' (' + r.netMarginLabel + ')', bold: true, tone: r.operatingProfit >= 0 ? 'positive' : 'negative' }
+          ]
+        });
+        if (ok) showToast(SM.t('1장짜리 정산 리포트 이미지(PNG)를 저장했습니다.', 'Saved Profit Report Card PNG.'));
+      });
+
       document.getElementById('btn-print-page').addEventListener('click', function () {
         window.print();
       });
+
+      var marketPresetsCtrl = SM.mountMarketPresetPills(
+        document.getElementById('market-preset-container'),
+        function (preset) {
+          var cur = readInputsFromForm();
+          cur.feeRate = preset.feeRate;
+          cur.shippingFeeRate = preset.shippingFeeRate;
+          cur.feeBasisMode = preset.feeBasisMode;
+          writeInputsToForm(cur);
+          renderResults();
+          if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
+          showToast(
+            SM.t(
+              preset.nameKo + ' 수수료(' + preset.feeRate + '%) 기준이 적용되었습니다.',
+              'Applied ' + preset.nameEn + ' (' + preset.feeRate + '%).'
+            )
+          );
+        }
+      );
+
+      var sellerWorkbenchCtrl = SM.mountSellerWorkbench(
+        document.getElementById('seller-workbench-container'),
+        {
+          getBaseInputs: readInputsFromForm,
+          onApplyMarketPreset: function (preset) {
+            var cur = readInputsFromForm();
+            cur.feeRate = preset.feeRate;
+            cur.shippingFeeRate = preset.shippingFeeRate;
+            cur.feeBasisMode = preset.feeBasisMode;
+            writeInputsToForm(cur);
+            renderResults();
+            if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+            if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast(SM.t(preset.nameKo + ' 조건을 상단 계산기에 적용했습니다.', 'Applied ' + preset.nameEn + '.'));
+          },
+          onApplyCogs: function (cogsAmount) {
+            var cur = readInputsFromForm();
+            cur.cogs = cogsAmount;
+            writeInputsToForm(cur);
+            renderResults();
+            if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast(
+              SM.t(
+                '중국 사입 도착원가 ' + SM.formatCurrency(cogsAmount) + '을 상단 상품 원가(COGS)에 반영했습니다.',
+                'Applied Landed COGS ' + SM.formatCurrency(cogsAmount) + '.'
+              )
+            );
+          }
+        }
+      );
 
       var bulkExcelWidget = SM.mountBulkExcelWidget(document.getElementById('bulk-excel-container'), {
         getBaseInputs: readInputsFromForm,
@@ -783,6 +886,8 @@
           SM.saveSharedInputs(rowInputs);
           writeInputsToForm(rowInputs);
           renderResults();
+          if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(rowInputs);
+          if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
           window.scrollTo({ top: 0, behavior: 'smooth' });
           showToast(
             SM.t(
@@ -797,7 +902,14 @@
         }
       });
 
+      form.addEventListener('input', function () {
+        if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+        if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
+      });
+
       form.addEventListener('change', function () {
+        if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+        if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
         if (bulkExcelWidget && bulkExcelWidget.getState().dataRows.length > 0) {
           bulkExcelWidget.recalculate();
         }
@@ -808,8 +920,13 @@
         renderResults();
         refreshScenarios();
       });
-      writeInputsToForm(SM.loadSharedInputs());
+      var sharedFromUrl = SM.parseShareUrlParams(window.location.search);
+      var initialInputs = sharedFromUrl || SM.loadSharedInputs();
+      if (sharedFromUrl) SM.saveSharedInputs(sharedFromUrl);
+      writeInputsToForm(initialInputs);
       renderResults();
+      if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(initialInputs);
+      if (sellerWorkbenchCtrl) sellerWorkbenchCtrl.recalculate();
       refreshScenarios();
     })();
   </script>

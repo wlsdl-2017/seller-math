@@ -1783,6 +1783,9 @@
     '건당 광고비': 'Ad Spend per Order',
     '시나리오 비교함에 저장': 'Save to Scenario Table',
     '계산 요약 복사': 'Copy Summary',
+    '계산 링크 복사': 'Copy Share Link',
+    '리포트 이미지(PNG) 저장': 'Save Report Card (PNG)',
+    '세무 리포트 이미지(PNG) 저장': 'Save Tax Report (PNG)',
     '인쇄 / PDF 저장': 'Print / Save PDF',
     '자주 묻는 질문 (FAQ)': 'Frequently Asked Questions (FAQ)',
     'SELLER MATH — 쇼핑몰 셀러 정산·마진·ROAS·판매가 역산 무료 웹 도구': 'SELLER MATH — Free Seller Profit, Settlement, ROAS & Pricing Tool'
@@ -3780,6 +3783,1173 @@
     };
   }
 
+  /* ==========================================================================
+     5대 셀러 실전 확장 기능:
+     1) 마켓별 수수료 프리셋·비교  2) 해외(1688) 수입원가·관부가세
+     3) 반품·재고 손익분기          4) 선정산·대출 마진 잠식
+     5) 원클릭 공유 URL & 1장짜리 Canvas PNG 리포트 카드 저장
+     ========================================================================== */
+
+  var MARKETPLACE_PRESETS = [
+    {
+      key: 'smartstore_linked',
+      nameKo: '스마트스토어 (검색연동)',
+      nameEn: 'SmartStore (Search)',
+      feeRate: 5.63,
+      shippingFeeRate: 3.63,
+      feeBasisMode: 'customer_payment',
+      noteKo: '주문관리 ~3.63% + 네이버쇼핑 연동 2%',
+      noteEn: 'Order mgmt ~3.63% + Search 2%'
+    },
+    {
+      key: 'smartstore_direct',
+      nameKo: '스마트스토어 (직접유입)',
+      nameEn: 'SmartStore (Direct)',
+      feeRate: 3.63,
+      shippingFeeRate: 3.63,
+      feeBasisMode: 'customer_payment',
+      noteKo: '네이버쇼핑 연동 제외 직접 유입',
+      noteEn: 'Direct link / SNS traffic'
+    },
+    {
+      key: 'coupang_general',
+      nameKo: '쿠팡 마켓 (일반)',
+      nameEn: 'Coupang (General)',
+      feeRate: 10.8,
+      shippingFeeRate: 3.3,
+      feeBasisMode: 'customer_payment',
+      noteKo: '일반 카테고리 평균 10.8% + 배송 3.3%',
+      noteEn: 'Avg 10.8% + Shipping 3.3%'
+    },
+    {
+      key: 'coupang_digital',
+      nameKo: '쿠팡 마켓 (가전·디지털)',
+      nameEn: 'Coupang (Digital)',
+      feeRate: 7.8,
+      shippingFeeRate: 3.3,
+      feeBasisMode: 'customer_payment',
+      noteKo: '디지털·가전 7.8% + 배송 3.3%',
+      noteEn: 'Digital 7.8% + Shipping 3.3%'
+    },
+    {
+      key: 'openmarket_11st_gmarket',
+      nameKo: '11번가 · G마켓 · 옥션',
+      nameEn: '11st / Gmarket / Auction',
+      feeRate: 13.0,
+      shippingFeeRate: 3.3,
+      feeBasisMode: 'customer_payment',
+      noteKo: '오픈마켓 일반 카테고리 평균 ~13%',
+      noteEn: 'Open market avg ~13%'
+    },
+    {
+      key: 'fashion_ably_zigzag',
+      nameKo: '에이블리 · 지그재그',
+      nameEn: 'Ably / Zigzag',
+      feeRate: 11.0,
+      shippingFeeRate: 3.3,
+      feeBasisMode: 'customer_payment',
+      noteKo: '패션 플랫폼 평균 수수료 ~11%',
+      noteEn: 'Fashion vertical avg ~11%'
+    },
+    {
+      key: 'own_mall_pg',
+      nameKo: '자사몰 (PG 기본)',
+      nameEn: 'Own Store (PG)',
+      feeRate: 3.3,
+      shippingFeeRate: 3.3,
+      feeBasisMode: 'total_payment_with_shipping',
+      noteKo: '카페24/아임웹 PG 결제 ~3.3%',
+      noteEn: 'D2C PG gateway ~3.3%'
+    }
+  ];
+
+  function compareMarketplaces(baseInputs) {
+    var base = normalizeInputs(baseInputs || cloneDefaults());
+    var items = MARKETPLACE_PRESETS.map(function (preset) {
+      var merged = Object.assign({}, base, {
+        feeRate: preset.feeRate,
+        shippingFeeRate: preset.shippingFeeRate,
+        feeBasisMode: preset.feeBasisMode
+      });
+      var profit = calculateProfit(merged);
+      var roas = calculateRoas(merged);
+      return {
+        preset: preset,
+        inputs: merged,
+        profit: profit,
+        roas: roas,
+        diffFromBest: 0
+      };
+    });
+
+    var bestItem = items[0];
+    var worstItem = items[0];
+    for (var i = 1; i < items.length; i++) {
+      if (items[i].profit.operatingProfit > bestItem.profit.operatingProfit) {
+        bestItem = items[i];
+      }
+      if (items[i].profit.operatingProfit < worstItem.profit.operatingProfit) {
+        worstItem = items[i];
+      }
+    }
+
+    for (var j = 0; j < items.length; j++) {
+      items[j].diffFromBest = items[j].profit.operatingProfit - bestItem.profit.operatingProfit;
+    }
+
+    return {
+      items: items,
+      bestMarketKey: bestItem.preset.key,
+      worstMarketKey: worstItem.preset.key,
+      maxSpreadKrw: bestItem.profit.operatingProfit - worstItem.profit.operatingProfit
+    };
+  }
+
+  function mountMarketPresetPills(container, onSelectPreset, initialActiveKey) {
+    if (!container || typeof document === 'undefined') return null;
+    var activeKey = initialActiveKey || '';
+
+    function render() {
+      clearEl(container);
+      var bar = createEl('div', 'market-preset-bar');
+      bar.appendChild(createEl('span', 'market-preset-title', t('마켓 수수료 빠른 선택:', 'Quick Market Fee Presets:')));
+
+      var pillsWrap = createEl('div', 'market-preset-pills');
+      MARKETPLACE_PRESETS.forEach(function (preset) {
+        var isAct = preset.key === activeKey;
+        var label = (currentLang === 'en' ? preset.nameEn : preset.nameKo) + ' ' + preset.feeRate + '%';
+        var btn = createEl('button', 'market-preset-chip' + (isAct ? ' active' : ''), label);
+        btn.type = 'button';
+        btn.title = currentLang === 'en' ? preset.noteEn : preset.noteKo;
+        btn.addEventListener('click', function () {
+          activeKey = preset.key;
+          if (typeof onSelectPreset === 'function') {
+            onSelectPreset(preset);
+          }
+          render();
+        });
+        pillsWrap.appendChild(btn);
+      });
+      bar.appendChild(pillsWrap);
+      container.appendChild(bar);
+    }
+
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('sellermath:langchange', render);
+    }
+    render();
+
+    return {
+      syncActiveByInputs: function (inp) {
+        if (!inp) return;
+        var matchedKey = '';
+        for (var i = 0; i < MARKETPLACE_PRESETS.length; i++) {
+          var p = MARKETPLACE_PRESETS[i];
+          if (
+            Math.abs(Number(inp.feeRate) - p.feeRate) < 1e-4 &&
+            Math.abs(Number(inp.shippingFeeRate) - p.shippingFeeRate) < 1e-4 &&
+            inp.feeBasisMode === p.feeBasisMode
+          ) {
+            matchedKey = p.key;
+            break;
+          }
+        }
+        if (matchedKey !== activeKey) {
+          activeKey = matchedKey;
+          render();
+        }
+      }
+    };
+  }
+
+  function calculateImportCogs(rawImport) {
+    var src = rawImport && typeof rawImport === 'object' ? rawImport : {};
+    var currency = src.currency === 'USD' ? 'USD' : 'CNY';
+    var foreignUnitPrice = toNonNegativeNumber(src.foreignUnitPrice, 25);
+    var exchangeRate = Math.max(1, toNonNegativeNumber(src.exchangeRate, currency === 'USD' ? 1400 : 195));
+    var orderQuantity = Math.max(1, Math.round(toNonNegativeNumber(src.orderQuantity, 100)));
+    var localShippingForeign = toNonNegativeNumber(src.localShippingForeign, 30);
+    var intlShippingKrw = toNonNegativeNumber(src.intlShippingKrw, 85000);
+    var customsDutyRate = Math.min(100, toNonNegativeNumber(src.customsDutyRate, 8));
+    var brokerAndClearanceFeeKrw = toNonNegativeNumber(src.brokerAndClearanceFeeKrw, 44000);
+    var defectRatePct = Math.min(90, toNonNegativeNumber(src.defectRatePct, 2));
+
+    var foreignGoodsTotal = foreignUnitPrice * orderQuantity;
+    var cifTaxableValueKrw = Math.round((foreignGoodsTotal + localShippingForeign) * exchangeRate + intlShippingKrw);
+    var customsDutyKrw = Math.round(cifTaxableValueKrw * (customsDutyRate / 100));
+    var importVatKrw = Math.round((cifTaxableValueKrw + customsDutyKrw) * VAT_RATE);
+    var brokerVatKrw = brokerAndClearanceFeeKrw - Math.round(brokerAndClearanceFeeKrw / (1 + VAT_RATE));
+    var totalCashOutflowKrw = cifTaxableValueKrw + customsDutyKrw + importVatKrw + brokerAndClearanceFeeKrw;
+    var totalRefundableVatKrw = importVatKrw + brokerVatKrw;
+    var sellableQuantity = Math.max(1, Math.floor(orderQuantity * (1 - defectRatePct / 100)));
+
+    var unitLandedCogsCash = Math.round(totalCashOutflowKrw / sellableQuantity);
+    var unitLandedCogsSupply = Math.round((totalCashOutflowKrw - totalRefundableVatKrw) / sellableQuantity);
+
+    return {
+      inputs: {
+        currency: currency,
+        foreignUnitPrice: foreignUnitPrice,
+        exchangeRate: exchangeRate,
+        orderQuantity: orderQuantity,
+        localShippingForeign: localShippingForeign,
+        intlShippingKrw: intlShippingKrw,
+        customsDutyRate: customsDutyRate,
+        brokerAndClearanceFeeKrw: brokerAndClearanceFeeKrw,
+        defectRatePct: defectRatePct
+      },
+      foreignGoodsTotal: foreignGoodsTotal,
+      cifTaxableValueKrw: cifTaxableValueKrw,
+      customsDutyKrw: customsDutyKrw,
+      importVatKrw: importVatKrw,
+      brokerVatKrw: brokerVatKrw,
+      totalCashOutflowKrw: totalCashOutflowKrw,
+      totalRefundableVatKrw: totalRefundableVatKrw,
+      sellableQuantity: sellableQuantity,
+      unitLandedCogsCash: unitLandedCogsCash,
+      unitLandedCogsSupply: unitLandedCogsSupply
+    };
+  }
+
+  function calculateReturnAndInventoryRisk(baseInputs, rawRisk) {
+    var profitRes = calculateProfit(baseInputs || cloneDefaults());
+    var src = rawRisk && typeof rawRisk === 'object' ? rawRisk : {};
+    var returnRatePct = Math.min(95, toNonNegativeNumber(src.returnRatePct, 6));
+    var roundTripReturnShippingKrw = toNonNegativeNumber(src.roundTripReturnShippingKrw, 6000);
+    var returnRepackLossKrw = toNonNegativeNumber(src.returnRepackLossKrw, 1000);
+    var inventoryBatchQty = Math.max(1, Math.round(toNonNegativeNumber(src.inventoryBatchQty, 100)));
+
+    var r = returnRatePct / 100;
+    var nominalUnitProfit = profitRes.operatingProfit;
+    var lossPerReturnOrder = roundTripReturnShippingKrw + returnRepackLossKrw + profitRes.recognizedAdSpend;
+    var expectedProfitPerOrder = (1 - r) * nominalUnitProfit - r * lossPerReturnOrder;
+    var ordersNeededToCoverOneReturn = nominalUnitProfit > EPSILON ? lossPerReturnOrder / nominalUnitProfit : null;
+
+    var totalBatchCogs = profitRes.recognizedCogs * inventoryBatchQty;
+    var netSalesGainPerSuccessOrder =
+      profitRes.recognizedRevenue - profitRes.recognizedFee - profitRes.recognizedShipping - profitRes.recognizedAdSpend;
+    var unitContributionBeforeCogs = netSalesGainPerSuccessOrder - (r / Math.max(0.01, 1 - r)) * lossPerReturnOrder;
+
+    var breakEvenSellQty = null;
+    var breakEvenSellThroughPct = null;
+    if (totalBatchCogs <= EPSILON) {
+      breakEvenSellQty = 0;
+      breakEvenSellThroughPct = 0;
+    } else if (unitContributionBeforeCogs > EPSILON) {
+      breakEvenSellQty = Math.ceil(totalBatchCogs / unitContributionBeforeCogs);
+      breakEvenSellThroughPct = (breakEvenSellQty / inventoryBatchQty) * 100;
+    }
+
+    var isBatchRecoverable = breakEvenSellQty !== null && breakEvenSellQty <= inventoryBatchQty;
+    var expectedMarginRate = profitRes.recognizedRevenue > EPSILON ? (expectedProfitPerOrder / profitRes.recognizedRevenue) * 100 : null;
+    var expectedMonthlyProfit = expectedProfitPerOrder * profitRes.monthlyUnits;
+
+    return {
+      inputs: {
+        returnRatePct: returnRatePct,
+        roundTripReturnShippingKrw: roundTripReturnShippingKrw,
+        returnRepackLossKrw: returnRepackLossKrw,
+        inventoryBatchQty: inventoryBatchQty
+      },
+      profitResult: profitRes,
+      nominalUnitProfit: nominalUnitProfit,
+      lossPerReturnOrder: lossPerReturnOrder,
+      expectedProfitPerOrder: expectedProfitPerOrder,
+      expectedMarginRate: expectedMarginRate,
+      expectedMonthlyProfit: expectedMonthlyProfit,
+      ordersNeededToCoverOneReturn: ordersNeededToCoverOneReturn,
+      totalBatchCogs: totalBatchCogs,
+      unitContributionBeforeCogs: unitContributionBeforeCogs,
+      breakEvenSellQty: breakEvenSellQty,
+      breakEvenSellThroughPct: breakEvenSellThroughPct,
+      isBatchRecoverable: isBatchRecoverable
+    };
+  }
+
+  function calculateFinancingImpact(baseInputs, rawFin) {
+    var profitRes = calculateProfit(baseInputs || cloneDefaults());
+    var src = rawFin && typeof rawFin === 'object' ? rawFin : {};
+    var earlyPayAdvanceDays = Math.min(180, toNonNegativeNumber(src.earlyPayAdvanceDays, 35));
+    var earlyPayDailyFeeRatePct = Math.min(5, toNonNegativeNumber(src.earlyPayDailyFeeRatePct, 0.035));
+    var loanAmountKrw = toNonNegativeNumber(src.loanAmountKrw, 20000000);
+    var loanAnnualRatePct = Math.min(100, toNonNegativeNumber(src.loanAnnualRatePct, 6.5));
+
+    var earlyPayFeePerOrder = profitRes.platformSettlement * (earlyPayDailyFeeRatePct / 100) * earlyPayAdvanceDays;
+    var earlyPayEffectiveAprPct = earlyPayDailyFeeRatePct * 365;
+    var unitProfitAfterEarlyPay = profitRes.operatingProfit - earlyPayFeePerOrder;
+    var marginDropPctPoints = profitRes.recognizedRevenue > EPSILON ? (earlyPayFeePerOrder / profitRes.recognizedRevenue) * 100 : 0;
+
+    var monthlyEarlyPayCost = earlyPayFeePerOrder * profitRes.monthlyUnits;
+    var monthlyLoanInterest = Math.round((loanAmountKrw * (loanAnnualRatePct / 100)) / 12);
+    var monthlyProfitAfterEarlyPay = profitRes.monthlyOperatingProfit - monthlyEarlyPayCost;
+    var monthlyProfitAfterLoan = profitRes.monthlyOperatingProfit - monthlyLoanInterest;
+
+    var comparisonNote = '';
+    if (monthlyEarlyPayCost > monthlyLoanInterest) {
+      comparisonNote = t(
+        '선정산 실효 연금리(' +
+          formatPercent(earlyPayEffectiveAprPct) +
+          ')가 대출 연금리(' +
+          formatPercent(loanAnnualRatePct) +
+          ')보다 높아 월 기준 ' +
+          formatCurrency(monthlyEarlyPayCost - monthlyLoanInterest) +
+          ' 더 많은 금융비용이 빠져나갑니다.',
+        'Early-payout APR (' +
+          formatPercent(earlyPayEffectiveAprPct) +
+          ') costs ' +
+          formatCurrency(monthlyEarlyPayCost - monthlyLoanInterest) +
+          '/mo more than the loan (' +
+          formatPercent(loanAnnualRatePct) +
+          ').'
+      );
+    } else {
+      comparisonNote = t(
+        '현재 월 판매 규모에서는 선정산 월 수수료(' +
+          formatCurrency(monthlyEarlyPayCost) +
+          ')가 사업자 대출 월 이자(' +
+          formatCurrency(monthlyLoanInterest) +
+          ')보다 ' +
+          formatCurrency(monthlyLoanInterest - monthlyEarlyPayCost) +
+          ' 적습니다.',
+        'At current volume, early payout fee (' +
+          formatCurrency(monthlyEarlyPayCost) +
+          ') is lower than loan interest (' +
+          formatCurrency(monthlyLoanInterest) +
+          '/mo).'
+      );
+    }
+
+    return {
+      inputs: {
+        earlyPayAdvanceDays: earlyPayAdvanceDays,
+        earlyPayDailyFeeRatePct: earlyPayDailyFeeRatePct,
+        loanAmountKrw: loanAmountKrw,
+        loanAnnualRatePct: loanAnnualRatePct
+      },
+      profitResult: profitRes,
+      earlyPayFeePerOrder: earlyPayFeePerOrder,
+      earlyPayEffectiveAprPct: earlyPayEffectiveAprPct,
+      unitProfitAfterEarlyPay: unitProfitAfterEarlyPay,
+      marginDropPctPoints: marginDropPctPoints,
+      monthlyEarlyPayCost: monthlyEarlyPayCost,
+      monthlyLoanInterest: monthlyLoanInterest,
+      monthlyProfitAfterEarlyPay: monthlyProfitAfterEarlyPay,
+      monthlyProfitAfterLoan: monthlyProfitAfterLoan,
+      comparisonNote: comparisonNote
+    };
+  }
+
+  var SHARE_PARAM_MAP = [
+    ['s_nm', 'itemName', 'str'],
+    ['s_lp', 'listPrice', 'num'],
+    ['s_sd', 'sellerDiscount', 'num'],
+    ['s_pd', 'platformDiscount', 'num'],
+    ['s_pr', 'platformSubsidyReimbursed', 'bool'],
+    ['s_cg', 'cogs', 'num'],
+    ['s_fb', 'feeBasisMode', 'str'],
+    ['s_fr', 'feeRate', 'num'],
+    ['s_cfm', 'customFeeMode', 'str'],
+    ['s_cfb', 'customFeeBase', 'num'],
+    ['s_cs', 'customerShipping', 'num'],
+    ['s_sc', 'sellerShippingCost', 'num'],
+    ['s_sfr', 'shippingFeeRate', 'num'],
+    ['s_ad', 'adSpend', 'num'],
+    ['s_ab', 'accountingBasis', 'str'],
+    ['s_tp', 'taxpayerType', 'str'],
+    ['s_svr', 'simplifiedValueAddedRate', 'nullableNum'],
+    ['s_dv', 'dailyVolume', 'num'],
+    ['s_md', 'monthlyDays', 'num'],
+    ['s_arb', 'adRevenueBasis', 'str'],
+    ['s_tm', 'targetMode', 'str'],
+    ['s_tpa', 'targetProfitAmount', 'num'],
+    ['s_tmr', 'targetMarginRate', 'num'],
+    ['s_sdt', 'sellerDiscountType', 'str'],
+    ['s_sdr', 'sellerDiscountRate', 'num'],
+    ['s_pdt', 'platformDiscountType', 'str'],
+    ['s_pdr', 'platformDiscountRate', 'num']
+  ];
+
+  function buildShareUrl(inputs, baseUrl) {
+    var inp = normalizeInputs(inputs || loadSharedInputs());
+    var params = new URLSearchParams();
+    SHARE_PARAM_MAP.forEach(function (spec) {
+      var qKey = spec[0];
+      var prop = spec[1];
+      var kind = spec[2];
+      var val = inp[prop];
+      if (kind === 'bool') {
+        params.set(qKey, val ? '1' : '0');
+      } else if (kind === 'nullableNum') {
+        if (val !== null && typeof val !== 'undefined' && val !== '') {
+          params.set(qKey, String(val));
+        }
+      } else if (val !== null && typeof val !== 'undefined') {
+        params.set(qKey, String(val));
+      }
+    });
+
+    var originPath = baseUrl;
+    if (!originPath) {
+      if (typeof window !== 'undefined' && window.location) {
+        originPath = window.location.origin + window.location.pathname;
+      } else {
+        originPath = 'https://seller-math.pages.dev/profit-calculator';
+      }
+    }
+    var sep = originPath.indexOf('?') !== -1 ? '&' : '?';
+    return originPath.split('#')[0] + sep + params.toString();
+  }
+
+  function parseShareUrlParams(searchStr) {
+    var raw = typeof searchStr === 'string'
+      ? searchStr
+      : typeof window !== 'undefined' && window.location
+      ? window.location.search
+      : '';
+    if (!raw || raw.indexOf('s_') === -1) return null;
+
+    var clean = raw.charAt(0) === '?' ? raw.slice(1) : raw;
+    var params = new URLSearchParams(clean);
+    var foundAny = false;
+    var merged = cloneDefaults();
+
+    SHARE_PARAM_MAP.forEach(function (spec) {
+      var qKey = spec[0];
+      var prop = spec[1];
+      var kind = spec[2];
+      if (!params.has(qKey)) return;
+      foundAny = true;
+      var v = params.get(qKey);
+      if (kind === 'bool') {
+        merged[prop] = v === '1' || v === 'true';
+      } else if (kind === 'nullableNum') {
+        merged[prop] = v === '' ? null : Number(v);
+      } else if (kind === 'num') {
+        merged[prop] = Number(v);
+      } else {
+        merged[prop] = v;
+      }
+    });
+
+    return foundAny ? normalizeInputs(merged) : null;
+  }
+
+  function drawRoundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function downloadReportCardPng(cardSpec) {
+    if (typeof document === 'undefined') return false;
+    var canvas = document.createElement('canvas');
+    if (!canvas || typeof canvas.getContext !== 'function') return false;
+
+    canvas.width = 1200;
+    canvas.height = 720;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+
+    var spec = cardSpec || {};
+    var fontStack = '"Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+
+    // Page Background
+    ctx.fillStyle = '#f2f4f6';
+    ctx.fillRect(0, 0, 1200, 720);
+
+    // Outer Report Sheet
+    ctx.fillStyle = '#ffffff';
+    drawRoundedRect(ctx, 36, 32, 1128, 656, 20);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Top Brand Accent Strip
+    ctx.fillStyle = '#1d4ed8';
+    drawRoundedRect(ctx, 36, 32, 1128, 8, 6);
+    ctx.fill();
+
+    // Brand Logo Badge
+    ctx.fillStyle = '#1d4ed8';
+    drawRoundedRect(ctx, 72, 64, 34, 34, 9);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 18px ' + fontStack;
+    ctx.fillText('₩', 81, 88);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 22px ' + fontStack;
+    ctx.fillText('SELLER MATH', 118, 88);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = '600 15px ' + fontStack;
+    ctx.textAlign = 'right';
+    ctx.fillText((spec.dateText || new Date().toISOString().slice(0, 10)) + '  |  seller-math.pages.dev', 1128, 86);
+    ctx.textAlign = 'left';
+
+    // Report Title & Subtitle
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 30px ' + fontStack;
+    ctx.fillText(String(spec.title || 'SELLER MATH Report').slice(0, 48), 72, 146);
+
+    ctx.fillStyle = '#475569';
+    ctx.font = '500 17px ' + fontStack;
+    ctx.fillText(String(spec.subtitle || '').slice(0, 75), 72, 178);
+
+    // 4 KPI Cards Row
+    var kpis = Array.isArray(spec.kpis) ? spec.kpis.slice(0, 4) : [];
+    var cardW = 248;
+    var gap = 21;
+    var startX = 72;
+    var kpiY = 206;
+
+    for (var i = 0; i < kpis.length; i++) {
+      var k = kpis[i];
+      var kx = startX + i * (cardW + gap);
+      var bgCol = k.tone === 'positive' ? '#f0fdf4' : k.tone === 'negative' ? '#fff1f2' : k.tone === 'highlight' ? '#f8fbff' : '#f8fafc';
+      var bdCol = k.tone === 'positive' ? '#86efac' : k.tone === 'negative' ? '#fda4af' : k.tone === 'highlight' ? '#93c5fd' : '#cbd5e1';
+      var valCol = k.tone === 'positive' ? '#047857' : k.tone === 'negative' ? '#be123c' : k.tone === 'highlight' ? '#1d4ed8' : '#0f172a';
+
+      ctx.fillStyle = bgCol;
+      drawRoundedRect(ctx, kx, kpiY, cardW, 132, 14);
+      ctx.fill();
+      ctx.strokeStyle = bdCol;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#475569';
+      ctx.font = '700 15px ' + fontStack;
+      ctx.fillText(String(k.label || '').slice(0, 22), kx + 18, kpiY + 34);
+
+      ctx.fillStyle = valCol;
+      ctx.font = '800 28px ' + fontStack;
+      ctx.fillText(String(k.value || '').slice(0, 18), kx + 18, kpiY + 78);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '500 13px ' + fontStack;
+      ctx.fillText(String(k.sub || '').slice(0, 28), kx + 18, kpiY + 110);
+    }
+
+    // Breakdown Table Section
+    var rows = Array.isArray(spec.rows) ? spec.rows.slice(0, 6) : [];
+    var tblY = 368;
+    ctx.fillStyle = '#f8fafc';
+    drawRoundedRect(ctx, 72, tblY, 1056, 256, 14);
+    ctx.fill();
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    for (var r = 0; r < rows.length; r++) {
+      var row = rows[r];
+      var ry = tblY + 14 + r * 38;
+      if (r % 2 === 1) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(74, ry, 1052, 36);
+      }
+      ctx.fillStyle = row.bold ? '#0f172a' : '#334155';
+      ctx.font = (row.bold ? '800' : '600') + ' 16px ' + fontStack;
+      ctx.textAlign = 'left';
+      ctx.fillText(String(row.label || '').slice(0, 48), 96, ry + 24);
+
+      ctx.fillStyle = row.tone === 'positive' ? '#047857' : row.tone === 'negative' ? '#be123c' : '#0f172a';
+      ctx.font = (row.bold ? '800' : '700') + ' 17px ' + fontStack;
+      ctx.textAlign = 'right';
+      ctx.fillText(String(row.value || '').slice(0, 32), 1104, ry + 24);
+      ctx.textAlign = 'left';
+    }
+
+    // Bottom Disclaimer Note
+    ctx.fillStyle = '#64748b';
+    ctx.font = '500 13px ' + fontStack;
+    ctx.fillText(
+      String(
+        spec.footerNote ||
+          t(
+            '본 리포트는 100% 브라우저 로컬 연산 결과이며 참고용 추정치입니다. (https://seller-math.pages.dev/)',
+            'Generated 100% locally in browser for reference only. (https://seller-math.pages.dev/)'
+          )
+      ),
+      72,
+      660
+    );
+
+    var filename = (spec.filename || 'seller-math-report-' + new Date().toISOString().slice(0, 10)) + '.png';
+    if (typeof canvas.toBlob === 'function') {
+      canvas.toBlob(function (blob) {
+        if (!blob) return;
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.setAttribute('download', filename);
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () {
+          URL.revokeObjectURL(url);
+        }, 1000);
+      }, 'image/png');
+    } else {
+      var dataUrl = canvas.toDataURL('image/png');
+      var link = document.createElement('a');
+      link.href = dataUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    return true;
+  }
+
+  function mountSellerWorkbench(container, options) {
+    if (!container || typeof document === 'undefined') return null;
+    var opts = options || {};
+    var getBase = typeof opts.getBaseInputs === 'function' ? opts.getBaseInputs : loadSharedInputs;
+
+    var state = {
+      activeTab: 'markets', // 'markets' | 'import' | 'risk' | 'financing'
+      importInputs: {
+        currency: 'CNY',
+        foreignUnitPrice: 25,
+        exchangeRate: 195,
+        orderQuantity: 100,
+        localShippingForeign: 30,
+        intlShippingKrw: 85000,
+        customsDutyRate: 8,
+        brokerAndClearanceFeeKrw: 44000,
+        defectRatePct: 2
+      },
+      riskInputs: {
+        returnRatePct: 6,
+        roundTripReturnShippingKrw: 6000,
+        returnRepackLossKrw: 1000,
+        inventoryBatchQty: 100
+      },
+      finInputs: {
+        earlyPayAdvanceDays: 35,
+        earlyPayDailyFeeRatePct: 0.035,
+        loanAmountKrw: 20000000,
+        loanAnnualRatePct: 6.5
+      }
+    };
+
+    var tabsSpec = [
+      { key: 'markets', ko: '🏪 7대 마켓 수익 비교', en: '🏪 7 Marketplaces Compare' },
+      { key: 'import', ko: '🚢 중국 사입·관부가세 원가', en: '🚢 Import COGS & Customs' },
+      { key: 'risk', ko: '📦 반품률·재고 손익분기', en: '📦 Return & Inventory BEP' },
+      { key: 'financing', ko: '💳 선정산·대출이자 분석', en: '💳 Early Payout vs Loan' }
+    ];
+
+    function makeField(labelText, inputType, val, stepVal, onInputCb, selectOptions) {
+      var wrap = createEl('div', 'field');
+      var lbl = createEl('label', '', labelText);
+      var el;
+      if (selectOptions) {
+        el = createEl('select', 'select-control');
+        selectOptions.forEach(function (opt) {
+          var o = createEl('option', '', opt.label);
+          o.value = opt.value;
+          el.appendChild(o);
+        });
+        el.value = String(val);
+        el.addEventListener('change', function () {
+          onInputCb(el.value);
+        });
+      } else {
+        el = createEl('input', 'input-control');
+        el.type = inputType || 'number';
+        el.min = '0';
+        if (stepVal) el.step = String(stepVal);
+        el.value = String(val);
+        el.addEventListener('input', function () {
+          onInputCb(el.value);
+        });
+      }
+      wrap.appendChild(lbl);
+      wrap.appendChild(el);
+      return wrap;
+    }
+
+    function makeResultBox(label, val, sub, tone) {
+      var box = createEl('div', 'kpi-card ' + (tone ? 'kpi-' + tone : ''));
+      box.appendChild(createEl('span', 'kpi-label', label));
+      box.appendChild(createEl('strong', 'kpi-value', val));
+      if (sub) box.appendChild(createEl('span', 'kpi-sub', sub));
+      return box;
+    }
+
+    function renderActivePane(paneContainer) {
+      clearEl(paneContainer);
+      var base = getBase();
+
+      if (state.activeTab === 'markets') {
+        var cmp = compareMarketplaces(base);
+        paneContainer.appendChild(
+          createEl(
+            'p',
+            'helper-note',
+            t(
+              '현재 입력된 판매가·원가·배송비·광고비·VAT 조건을 기준으로 7개 대표 쇼핑몰별 실제 영업이익과 손익분기 ROAS를 비교합니다. (최대 순이익 격차: ' +
+                formatCurrency(cmp.maxSpreadKrw) +
+                ')',
+              'Compares net operating profit and Break-Even ROAS across 7 marketplaces using your active item price & costs. (Profit spread: ' +
+                formatCurrency(cmp.maxSpreadKrw) +
+                ')'
+            )
+          )
+        );
+
+        var tblWrap = createEl('div', 'table-responsive');
+        var tbl = createEl('table', 'data-table');
+        var thead = createEl('thead');
+        var htr = createEl('tr');
+        [
+          t('마켓 / 채널', 'Marketplace'),
+          t('판매·배송 수수료', 'Fee Rate'),
+          t('정산 예정액', 'Est. Payout'),
+          t('영업 추정 이익', 'Est. Profit'),
+          t('순마진율', 'Net Margin'),
+          t('손익분기 ROAS', 'BE ROAS'),
+          t('최고 대비', 'vs Best'),
+          t('적용', 'Apply')
+        ].forEach(function (h) {
+          htr.appendChild(createEl('th', '', h));
+        });
+        thead.appendChild(htr);
+        tbl.appendChild(thead);
+
+        var tbody = createEl('tbody');
+        cmp.items.forEach(function (item) {
+          var isBest = item.preset.key === cmp.bestMarketKey;
+          var tr = createEl('tr', isBest ? 'row-highlight' : '');
+          var nameCell = createEl('td');
+          nameCell.appendChild(createEl('strong', '', currentLang === 'en' ? item.preset.nameEn : item.preset.nameKo));
+          if (isBest) {
+            nameCell.appendChild(createEl('span', 'status-pill status-profit', t(' 최고 마진', ' Best')));
+          }
+          tr.appendChild(nameCell);
+          tr.appendChild(createEl('td', '', item.preset.feeRate + '% / ' + item.preset.shippingFeeRate + '%'));
+          tr.appendChild(createEl('td', 'num', formatCurrency(item.profit.platformSettlement)));
+          tr.appendChild(
+            createEl(
+              'td',
+              'num ' + (item.profit.operatingProfit >= 0 ? 'text-positive' : 'text-negative'),
+              formatCurrency(item.profit.operatingProfit)
+            )
+          );
+          tr.appendChild(createEl('td', 'num', item.profit.netMarginLabel));
+          tr.appendChild(createEl('td', 'num', item.roas.breakEvenRoasLabel));
+          tr.appendChild(createEl('td', 'num', isBest ? t('기준 (1위)', 'Best (#1)') : formatCurrency(item.diffFromBest)));
+
+          var actTd = createEl('td');
+          var applyBtn = createEl('button', 'btn btn-outline btn-table-sm', t('적용', 'Apply'));
+          applyBtn.type = 'button';
+          applyBtn.addEventListener('click', function () {
+            if (typeof opts.onApplyMarketPreset === 'function') {
+              opts.onApplyMarketPreset(item.preset);
+            }
+          });
+          actTd.appendChild(applyBtn);
+          tr.appendChild(actTd);
+          tbody.appendChild(tr);
+        });
+        tbl.appendChild(tbody);
+        tblWrap.appendChild(tbl);
+        paneContainer.appendChild(tblWrap);
+        return;
+      }
+
+      if (state.activeTab === 'import') {
+        var grid = createEl('div', 'workbench-grid');
+        var formCol = createEl('div', 'form-grid');
+        var resCol = createEl('div');
+
+        function updateImpRes() {
+          clearEl(resCol);
+          var impRes = calculateImportCogs(state.importInputs);
+          var kpiG = createEl('div', 'kpi-grid');
+          kpiG.appendChild(
+            makeResultBox(
+              t('개당 도착원가 (VAT 포함 현금기준)', 'Landed COGS / Unit (Cash Incl. VAT)'),
+              formatCurrency(impRes.unitLandedCogsCash),
+              t('판매 가능 ' + impRes.sellableQuantity + '개 기준', 'Across ' + impRes.sellableQuantity + ' sellable units'),
+              'highlight'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('개당 실원가 (부가세 환급 차감)', 'Landed COGS / Unit (Excl. Creditable VAT)'),
+              formatCurrency(impRes.unitLandedCogsSupply),
+              t('일반과세 매입세액 ' + formatCurrency(impRes.totalRefundableVatKrw) + ' 공제 후', 'After ' + formatCurrency(impRes.totalRefundableVatKrw) + ' VAT refund'),
+              'positive'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('총 수입 현금 소요액 (물대+관부가세+물류)', 'Total Landed Cash Outflow'),
+              formatCurrency(impRes.totalCashOutflowKrw),
+              t('과세가격(CIF) ' + formatCurrency(impRes.cifTaxableValueKrw), 'CIF Value ' + formatCurrency(impRes.cifTaxableValueKrw)),
+              ''
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('예상 관세 + 수입부가세 합계', 'Customs Duty + Import VAT'),
+              formatCurrency(impRes.customsDutyKrw + impRes.importVatKrw),
+              t('관세 ' + formatCurrency(impRes.customsDutyKrw) + ' / 세관VAT ' + formatCurrency(impRes.importVatKrw), 'Duty ' + formatCurrency(impRes.customsDutyKrw) + ' / VAT ' + formatCurrency(impRes.importVatKrw)),
+              ''
+            )
+          );
+          resCol.appendChild(kpiG);
+
+          var btnRow = createEl('div', 'btn-row');
+          var applyCashBtn = createEl('button', 'btn btn-primary btn-table-sm', t('개당 도착원가(VAT포함 ' + formatCurrency(impRes.unitLandedCogsCash) + ')를 상단 원가(COGS)에 반영', 'Apply Cash Landed COGS (' + formatCurrency(impRes.unitLandedCogsCash) + ')'));
+          applyCashBtn.type = 'button';
+          applyCashBtn.addEventListener('click', function () {
+            if (typeof opts.onApplyCogs === 'function') {
+              opts.onApplyCogs(impRes.unitLandedCogsCash, impRes);
+            }
+          });
+          btnRow.appendChild(applyCashBtn);
+          resCol.appendChild(btnRow);
+        }
+
+        var row1 = createEl('div', 'form-grid-2');
+        row1.appendChild(
+          makeField(
+            t('결제 통화', 'Currency'),
+            'select',
+            state.importInputs.currency,
+            null,
+            function (v) {
+              state.importInputs.currency = v === 'USD' ? 'USD' : 'CNY';
+              updateImpRes();
+            },
+            [
+              { value: 'CNY', label: t('중국 위안 (CNY ¥)', 'CNY (¥)') },
+              { value: 'USD', label: t('미국 달러 (USD $)', 'USD ($)') }
+            ]
+          )
+        );
+        row1.appendChild(
+          makeField(t('적용 환율 (원)', 'Exchange Rate (KRW)'), 'number', state.importInputs.exchangeRate, '1', function (v) {
+            state.importInputs.exchangeRate = Number(v);
+            updateImpRes();
+          })
+        );
+        formCol.appendChild(row1);
+
+        var row2 = createEl('div', 'form-grid-2');
+        row2.appendChild(
+          makeField(t('해외 개당 사입 단가 (외화)', 'Foreign Unit Price'), 'number', state.importInputs.foreignUnitPrice, '0.1', function (v) {
+            state.importInputs.foreignUnitPrice = Number(v);
+            updateImpRes();
+          })
+        );
+        row2.appendChild(
+          makeField(t('총 사입 수량 (개)', 'Order Quantity'), 'number', state.importInputs.orderQuantity, '1', function (v) {
+            state.importInputs.orderQuantity = Number(v);
+            updateImpRes();
+          })
+        );
+        formCol.appendChild(row2);
+
+        var row3 = createEl('div', 'form-grid-2');
+        row3.appendChild(
+          makeField(t('중국 내륙운임 합계 (외화)', 'Local Shipping (Foreign)'), 'number', state.importInputs.localShippingForeign, '1', function (v) {
+            state.importInputs.localShippingForeign = Number(v);
+            updateImpRes();
+          })
+        );
+        row3.appendChild(
+          makeField(t('배대지 국제운임 합계 (원)', 'Intl Freight (KRW)'), 'number', state.importInputs.intlShippingKrw, '1000', function (v) {
+            state.importInputs.intlShippingKrw = Number(v);
+            updateImpRes();
+          })
+        );
+        formCol.appendChild(row3);
+
+        var row4 = createEl('div', 'form-grid-2');
+        row4.appendChild(
+          makeField(t('예상 관세율 (%)', 'Customs Duty (%)'), 'number', state.importInputs.customsDutyRate, '0.5', function (v) {
+            state.importInputs.customsDutyRate = Number(v);
+            updateImpRes();
+          })
+        );
+        row4.appendChild(
+          makeField(t('통관·원산지·국내택배 (원)', 'Clearance & Local Logistics'), 'number', state.importInputs.brokerAndClearanceFeeKrw, '1000', function (v) {
+            state.importInputs.brokerAndClearanceFeeKrw = Number(v);
+            updateImpRes();
+          })
+        );
+        formCol.appendChild(row4);
+
+        formCol.appendChild(
+          makeField(t('예상 불량·파손율 (%)', 'Expected Defect Rate (%)'), 'number', state.importInputs.defectRatePct, '0.5', function (v) {
+            state.importInputs.defectRatePct = Number(v);
+            updateImpRes();
+          })
+        );
+
+        grid.appendChild(formCol);
+        grid.appendChild(resCol);
+        paneContainer.appendChild(grid);
+        updateImpRes();
+        return;
+      }
+
+      if (state.activeTab === 'risk') {
+        var rGrid = createEl('div', 'workbench-grid');
+        var rForm = createEl('div', 'form-grid');
+        var rResCol = createEl('div');
+
+        function updateRiskRes() {
+          clearEl(rResCol);
+          var riskRes = calculateReturnAndInventoryRisk(getBase(), state.riskInputs);
+          var kpiG = createEl('div', 'kpi-grid');
+          kpiG.appendChild(
+            makeResultBox(
+              t('반품 손실 반영 기대 순이익 (1건당)', 'Expected Net Profit (After Returns)'),
+              formatCurrency(riskRes.expectedProfitPerOrder),
+              t(
+                '명목 이익 ' + formatCurrency(riskRes.nominalUnitProfit) + ' → 실질 마진 ' + (riskRes.expectedMarginRate !== null ? formatPercent(riskRes.expectedMarginRate) : '-'),
+                'Nominal ' + formatCurrency(riskRes.nominalUnitProfit)
+              ),
+              riskRes.expectedProfitPerOrder >= 0 ? 'positive' : 'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('반품 1건 발생 시 메워야 할 판매수', 'Normal Orders to Offset 1 Return'),
+              riskRes.ordersNeededToCoverOneReturn !== null ? formatNumber(riskRes.ordersNeededToCoverOneReturn, 1) + t('건', ' orders') : t('회복 불가', 'N/A'),
+              t('반품 1건 매몰 손실: ' + formatCurrency(riskRes.lossPerReturnOrder), 'Loss per return: ' + formatCurrency(riskRes.lossPerReturnOrder)),
+              'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('사입 원금(' + formatCurrency(riskRes.totalBatchCogs) + ') 회수 수량', 'Batch Inventory Break-Even Qty'),
+              riskRes.breakEvenSellQty !== null ? formatNumber(riskRes.breakEvenSellQty) + t('개 판매', ' units') : t('회수 불가 (역마진)', 'Unrecoverable'),
+              riskRes.breakEvenSellThroughPct !== null
+                ? t('총 ' + riskRes.inputs.inventoryBatchQty + '개 중 ' + formatPercent(riskRes.breakEvenSellThroughPct) + ' 소진 시 본전', formatPercent(riskRes.breakEvenSellThroughPct) + ' sell-through')
+                : t('단위 공헌이익 부족', 'Insufficient unit margin'),
+              riskRes.isBatchRecoverable ? 'highlight' : 'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('반품 반영 월 예상 순이익', 'Expected Monthly Profit'),
+              formatCurrency(riskRes.expectedMonthlyProfit),
+              t('월 ' + formatNumber(riskRes.profitResult.monthlyUnits) + '건 판매 가정', riskRes.profitResult.monthlyUnits + ' orders/mo'),
+              riskRes.expectedMonthlyProfit >= 0 ? 'positive' : 'negative'
+            )
+          );
+          rResCol.appendChild(kpiG);
+
+          var gaugeWrap = createEl('div', 'threshold-meter-wrap');
+          var gHead = createEl('div', 'threshold-header-row');
+          gHead.appendChild(createEl('span', '', t('사입 재고 원금 회수 손익분기점 (목표 소진율)', 'Inventory Cost Recovery Progress')));
+          gHead.appendChild(
+            createEl(
+              'span',
+              'tax-num',
+              riskRes.breakEvenSellThroughPct !== null ? formatPercent(riskRes.breakEvenSellThroughPct) : t('산출 불가', 'N/A')
+            )
+          );
+          gaugeWrap.appendChild(gHead);
+          var gBar = createEl('div', 'inventory-gauge-bar');
+          var gFill = createEl('div', 'inventory-gauge-fill' + (!riskRes.isBatchRecoverable ? ' is-danger' : ''));
+          gFill.style.width = Math.min(100, Math.max(0, riskRes.breakEvenSellThroughPct || 100)) + '%';
+          gBar.appendChild(gFill);
+          gaugeWrap.appendChild(gBar);
+          rResCol.appendChild(gaugeWrap);
+        }
+
+        rForm.appendChild(
+          makeField(t('예상 반품·교환율 (%)', 'Expected Return Rate (%)'), 'number', state.riskInputs.returnRatePct, '0.5', function (v) {
+            state.riskInputs.returnRatePct = Number(v);
+            updateRiskRes();
+          })
+        );
+        rForm.appendChild(
+          makeField(t('반품 1건당 왕복 택배 손실 (원)', 'Round-Trip Return Shipping Loss'), 'number', state.riskInputs.roundTripReturnShippingKrw, '100', function (v) {
+            state.riskInputs.roundTripReturnShippingKrw = Number(v);
+            updateRiskRes();
+          })
+        );
+        rForm.appendChild(
+          makeField(t('포장재·재검수 폐기 손실 (원)', 'Repackaging / Damage Loss'), 'number', state.riskInputs.returnRepackLossKrw, '100', function (v) {
+            state.riskInputs.returnRepackLossKrw = Number(v);
+            updateRiskRes();
+          })
+        );
+        rForm.appendChild(
+          makeField(t('총 사입 재고 수량 (개)', 'Batch Inventory Quantity'), 'number', state.riskInputs.inventoryBatchQty, '1', function (v) {
+            state.riskInputs.inventoryBatchQty = Number(v);
+            updateRiskRes();
+          })
+        );
+
+        rGrid.appendChild(rForm);
+        rGrid.appendChild(rResCol);
+        paneContainer.appendChild(rGrid);
+        updateRiskRes();
+        return;
+      }
+
+      if (state.activeTab === 'financing') {
+        var fGrid = createEl('div', 'workbench-grid');
+        var fForm = createEl('div', 'form-grid');
+        var fResCol = createEl('div');
+
+        function updateFinRes() {
+          clearEl(fResCol);
+          var fin = calculateFinancingImpact(getBase(), state.finInputs);
+          var kpiG = createEl('div', 'kpi-grid');
+          kpiG.appendChild(
+            makeResultBox(
+              t('선정산 이용 시 건당 순이익', 'Unit Profit After Early Payout Fee'),
+              formatCurrency(fin.unitProfitAfterEarlyPay),
+              t('건당 수수료 -' + formatCurrency(fin.earlyPayFeePerOrder) + ' (마진 ' + formatPercent(fin.marginDropPctPoints) + 'p 잠식)', 'Fee -' + formatCurrency(fin.earlyPayFeePerOrder)),
+              fin.unitProfitAfterEarlyPay >= 0 ? 'highlight' : 'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('선정산 연환산 실효금리 (APR)', 'Early Payout Effective APR'),
+              formatPercent(fin.earlyPayEffectiveAprPct),
+              t('일 ' + fin.inputs.earlyPayDailyFeeRatePct + '% × 365일 환산', fin.inputs.earlyPayDailyFeeRatePct + '%/day × 365'),
+              'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('월간 선정산 수수료 총액', 'Monthly Early Payout Cost'),
+              formatCurrency(fin.monthlyEarlyPayCost),
+              t('이용 후 월 순이익: ' + formatCurrency(fin.monthlyProfitAfterEarlyPay), 'Monthly Profit: ' + formatCurrency(fin.monthlyProfitAfterEarlyPay)),
+              ''
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('사업자 대출 월 예상 이자', 'Monthly Business Loan Interest'),
+              formatCurrency(fin.monthlyLoanInterest),
+              t('이자 차감 후 월 순이익: ' + formatCurrency(fin.monthlyProfitAfterLoan), 'After-Loan Profit: ' + formatCurrency(fin.monthlyProfitAfterLoan)),
+              'positive'
+            )
+          );
+          fResCol.appendChild(kpiG);
+          fResCol.appendChild(createEl('div', 'tax-comp-note', fin.comparisonNote));
+        }
+
+        fForm.appendChild(
+          makeField(t('선정산 단축 일수 (일, 쿠팡 평균 30~45일)', 'Early Payout Advance Days'), 'number', state.finInputs.earlyPayAdvanceDays, '1', function (v) {
+            state.finInputs.earlyPayAdvanceDays = Number(v);
+            updateFinRes();
+          })
+        );
+        fForm.appendChild(
+          makeField(t('선정산 일 수수료율 (%)', 'Daily Fee Rate (%)'), 'number', state.finInputs.earlyPayDailyFeeRatePct, '0.005', function (v) {
+            state.finInputs.earlyPayDailyFeeRatePct = Number(v);
+            updateFinRes();
+          })
+        );
+        fForm.appendChild(
+          makeField(t('비교용 사업자 운전자금 대출금 (원)', 'Working Capital Loan Amount (KRW)'), 'number', state.finInputs.loanAmountKrw, '1000000', function (v) {
+            state.finInputs.loanAmountKrw = Number(v);
+            updateFinRes();
+          })
+        );
+        fForm.appendChild(
+          makeField(t('사업자 대출 연금리 (%)', 'Loan Annual Interest Rate (%)'), 'number', state.finInputs.loanAnnualRatePct, '0.1', function (v) {
+            state.finInputs.loanAnnualRatePct = Number(v);
+            updateFinRes();
+          })
+        );
+
+        fGrid.appendChild(fForm);
+        fGrid.appendChild(fResCol);
+        paneContainer.appendChild(fGrid);
+        updateFinRes();
+      }
+    }
+
+    function renderAll() {
+      clearEl(container);
+      var header = createEl('div', 'bulk-excel-header');
+      var titleBox = createEl('div');
+      titleBox.appendChild(
+        createEl(
+          'h2',
+          'card-title',
+          t('셀러 실전 확장 워크벤치 (마켓 비교 · 사입 원가 · 반품/재고 · 선정산 분석)', 'Seller Operational Workbench (Markets · Import COGS · Returns · Financing)')
+        )
+      );
+      titleBox.appendChild(
+        createEl(
+          'p',
+          'card-subtitle',
+          t(
+            '상단 계산기 입력값과 실시간 연동되어 7개 마켓 손익, 1688 수입 관부가세 원가, 반품·재고 본전 수량, 선정산 마진 잠식을 즉시 시뮬레이션합니다.',
+            'Synced in real time with your active inputs: compare 7 markets, calculate landed import COGS, return/inventory break-even, and financing fees.'
+          )
+        )
+      );
+      header.appendChild(titleBox);
+      container.appendChild(header);
+
+      var tabBar = createEl('div', 'workbench-tabs');
+      var pane = createEl('div', 'workbench-pane');
+
+      tabsSpec.forEach(function (tab) {
+        var btn = createEl(
+          'button',
+          'workbench-tab-btn' + (tab.key === state.activeTab ? ' active' : ''),
+          currentLang === 'en' ? tab.en : tab.ko
+        );
+        btn.type = 'button';
+        btn.addEventListener('click', function () {
+          state.activeTab = tab.key;
+          renderAll();
+        });
+        tabBar.appendChild(btn);
+      });
+
+      container.appendChild(tabBar);
+      container.appendChild(pane);
+      renderActivePane(pane);
+    }
+
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('sellermath:langchange', renderAll);
+    }
+
+    renderAll();
+
+    return {
+      recalculate: function () {
+        var paneEl = container.querySelector('.workbench-pane');
+        if (paneEl) {
+          renderActivePane(paneEl);
+        }
+      },
+      setTab: function (tabKey) {
+        state.activeTab = tabKey;
+        renderAll();
+      }
+    };
+  }
+
   return {
     DEFAULT_INPUTS: DEFAULT_INPUTS,
     FEE_BASIS_LABELS: FEE_BASIS_LABELS,
@@ -3789,7 +4959,17 @@
     VAT_EXEMPT_PAYMENT_THRESHOLD: VAT_EXEMPT_PAYMENT_THRESHOLD,
     KOREAN_INCOME_TAX_BRACKETS: KOREAN_INCOME_TAX_BRACKETS,
     INDUSTRY_TAX_SPECS: INDUSTRY_TAX_SPECS,
+    MARKETPLACE_PRESETS: MARKETPLACE_PRESETS,
     calculateKoreanTax: calculateKoreanTax,
+    compareMarketplaces: compareMarketplaces,
+    mountMarketPresetPills: mountMarketPresetPills,
+    calculateImportCogs: calculateImportCogs,
+    calculateReturnAndInventoryRisk: calculateReturnAndInventoryRisk,
+    calculateFinancingImpact: calculateFinancingImpact,
+    buildShareUrl: buildShareUrl,
+    parseShareUrlParams: parseShareUrlParams,
+    downloadReportCardPng: downloadReportCardPng,
+    mountSellerWorkbench: mountSellerWorkbench,
     getLang: getLang,
     setLang: setLang,
     t: t,

@@ -145,6 +145,7 @@
                 <label for="cogs">상품 매입 원가 COGS (원)</label>
                 <input id="cogs" name="cogs" type="number" min="0" step="10" class="input-control">
               </div>
+              <div id="market-preset-container"></div>
               <div class="field">
                 <label for="feeBasisMode">수수료 부과 기준</label>
                 <select id="feeBasisMode" name="feeBasisMode" class="select-control">
@@ -275,6 +276,8 @@
             <button type="button" class="btn btn-primary" id="btn-save-scenario">역산 결과 시나리오 저장</button>
             <button type="button" class="btn btn-secondary" id="btn-send-to-shared">순이익·ROAS 계산기에 가격 반영</button>
             <button type="button" class="btn btn-outline" id="btn-copy-summary">역산 결과 복사</button>
+            <button type="button" class="btn btn-outline" id="btn-share-url">계산 링크 복사</button>
+            <button type="button" class="btn btn-secondary" id="btn-download-png">리포트 이미지(PNG) 저장</button>
           </div>
           <div id="action-toast" class="toast-msg" aria-live="polite"></div>
         </section>
@@ -925,13 +928,71 @@
         });
       });
 
+      document.getElementById('btn-share-url').addEventListener('click', function () {
+        var url = SM.buildShareUrl(readInputsFromForm());
+        SM.copyTextToClipboard(url).then(function (ok) {
+          showToast(ok ? SM.t('판매가 역산 공유 링크를 복사했습니다.', 'Copied share link.') : SM.t('복사에 실패했습니다.', 'Copy failed.'));
+        });
+      });
+
+      document.getElementById('btn-download-png').addEventListener('click', function () {
+        if (!lastReverseResult || !lastReverseResult.success) {
+          showToast(SM.t('유효한 역산 결과가 있을 때 이미지를 저장할 수 있습니다.', 'Calculate a valid price first.'));
+          return;
+        }
+        var v = lastReverseResult.verifiedRounded;
+        var ok = SM.downloadReportCardPng({
+          filename: 'seller-math-pricing-' + new Date().toISOString().slice(0, 10),
+          title: (v.inputs.itemName || SM.t('목표 마진 판매가 역산 리포트', 'Target Price Report')),
+          subtitle: v.feeBasisLabel + ' · ' + v.accountingBasisLabel,
+          kpis: [
+            { label: SM.t('권장 등록 정가', 'Recommended List Price'), value: SM.formatCurrency(lastReverseResult.roundedListPrice), sub: SM.t('실결제가 ', 'Paid ') + SM.formatCurrency(v.customerPayment), tone: 'highlight' },
+            { label: SM.t('예상 정산 예정액', 'Est. Platform Payout'), value: SM.formatCurrency(v.platformSettlement), sub: SM.t('수수료 ', 'Fee ') + SM.formatCurrency(v.feeVat.cash), tone: '' },
+            { label: SM.t('검증 건당 순이익', 'Verified Unit Profit'), value: SM.formatCurrency(v.operatingProfit), sub: SM.t('순마진율 ', 'Margin ') + v.netMarginLabel, tone: v.operatingProfit >= 0 ? 'positive' : 'negative' },
+            { label: SM.t('원가 대비 ROI', 'COGS ROI'), value: v.roiLabel, sub: SM.t('매입원가 ', 'COGS ') + SM.formatCurrency(v.inputs.cogs), tone: '' }
+          ],
+          rows: [
+            { label: SM.t('Round-Trip 자동 역검증', 'Round-Trip Verification'), value: lastReverseResult.verificationBadgeText, tone: 'positive' },
+            { label: SM.t('판매자 / 플랫폼 할인', 'Seller / Platform Discounts'), value: SM.formatCurrency(v.sellerDiscount) + ' / ' + SM.formatCurrency(v.platformDiscount) },
+            { label: SM.t('마켓 수수료 + 원가 + 배송 + 광고', 'Total Costs & Fees'), value: '-' + SM.formatCurrency(v.feeVat.cash + v.recognizedCogs + v.recognizedShipping + v.recognizedAdSpend), tone: 'negative' },
+            { label: SM.t('참고 부가세 추정치', 'VAT Reference Estimate'), value: v.taxEstimate.displayAmount },
+            { label: SM.t('권장 등록 정가 / 달성 순이익', 'List Price / Achieved Profit'), value: SM.formatCurrency(lastReverseResult.roundedListPrice) + ' / ' + SM.formatCurrency(v.operatingProfit), bold: true, tone: 'positive' }
+          ]
+        });
+        if (ok) showToast(SM.t('판매가 역산 리포트 이미지(PNG)를 저장했습니다.', 'Saved Pricing Report Card PNG.'));
+      });
+
+      var marketPresetsCtrl = SM.mountMarketPresetPills(
+        document.getElementById('market-preset-container'),
+        function (preset) {
+          var cur = readInputsFromForm();
+          cur.feeRate = preset.feeRate;
+          cur.shippingFeeRate = preset.shippingFeeRate;
+          cur.feeBasisMode = preset.feeBasisMode;
+          writeInputsToForm(cur);
+          renderResults();
+          showToast(SM.t(preset.nameKo + ' 수수료(' + preset.feeRate + '%) 기준이 적용되었습니다.', 'Applied ' + preset.nameEn + '.'));
+        }
+      );
+
+      form.addEventListener('input', function () {
+        if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+      });
+      form.addEventListener('change', function () {
+        if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+      });
+
       SM.initI18n(PAGE_DICT, 'Target Margin Selling Price Calculator | SELLER MATH');
       window.addEventListener('sellermath:langchange', function () {
         renderResults();
         refreshScenarios();
       });
-      writeInputsToForm(SM.loadSharedInputs());
+      var sharedFromUrl = SM.parseShareUrlParams(window.location.search);
+      var initialInputs = sharedFromUrl || SM.loadSharedInputs();
+      if (sharedFromUrl) SM.saveSharedInputs(sharedFromUrl);
+      writeInputsToForm(initialInputs);
       renderResults();
+      if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(initialInputs);
       refreshScenarios();
     })();
   </script>

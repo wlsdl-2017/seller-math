@@ -70,3 +70,15 @@
   - `common.js` 내 면세사업자 매입부가세 전액 경비 처리 및 간이과세자 `supply_basis` 실효 부가세 일관성 반영
   - `style.css` 숫자 `tabular-nums` 정렬, KPI 카드 좌측 컬러 액센트 바, 2×2 허브 그리드, 세무 진단 시각화 컴포넌트 적용
   - **QA 재검증:** `qa_verify.js` **11 / 11 PASS**, 인라인 JS 구문 6/6 PASS, DOM ID 무결성 6/6 PASS
+
+
+---
+
+### [기능 업데이트] 2026-11-19 — 5대 셀러 실전 확장 기능 일괄 추가 (비용 0원 · 100% 브라우저 로컬)
+- **추가된 5대 기능 (`common.js`, `style.css`, 5개 HTML 반영):**
+  1. **7대 마켓 수수료 프리셋 & 동시 비교표:** 스마트스토어(연동/직접), 쿠팡(일반/디지털), 11번가·G마켓, 에이블리·지그재그, 자사몰 PG 원클릭 칩 & 순이익/ROAS 비교표(`compareMarketplaces`, `mountMarketPresetPills`)
+  2. **중국 사입(1688·타오바오) 수입원가 & 관부가세 계산기:** 외화·환율·현지운임·국제운임·관세율·수입부가세·불량률 반영 개당 도착원가 산출 및 상단 `COGS` 즉시 반영(`calculateImportCogs`)
+  3. **반품률·불량률 & 사입 재고 손익분기(본전 수량) 시뮬레이터:** 반품 왕복 손실 반영 기대 순이익, 반품 1건 상쇄 필요 판매수, 재고 원금 회수 최소 소진 수량·게이지(`calculateReturnAndInventoryRisk`)
+  4. **선정산 수수료 · 사업자 대출이자 vs 마진 잠식 분석:** 선정산 연환산 실효금리(APR) 및 월 금융비용 vs 대출이자 대조(`calculateFinancingImpact`)
+  5. **원클릭 계산 링크 복사(`buildShareUrl`/`parseShareUrlParams`) & 1장짜리 Canvas PNG 리포트 카드 저장(`downloadReportCardPng`)**
+- **사전 QA 검증:** `qa_verify.js` **12 / 12 PASS**, 인라인 JS 구문 **6 / 6 SYNTAX_OK**, DOM ID 무결성 **6 / 6 누락 없음**

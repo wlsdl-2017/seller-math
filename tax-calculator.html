@@ -265,6 +265,7 @@
 
           <div class="btn-row" style="margin-top: 16px;">
             <button type="button" class="btn btn-primary" id="btn-copy-tax-summary">세무 진단 요약 복사</button>
+            <button type="button" class="btn btn-outline" id="btn-download-tax-png">세무 리포트 이미지(PNG) 저장</button>
             <button type="button" class="btn btn-ghost" id="btn-print-tax">인쇄 / PDF 저장</button>
           </div>
           <div id="tax-action-toast" class="toast-msg" hidden role="status" aria-live="polite"></div>
@@ -1043,6 +1044,34 @@
               : SM.t('클립보드 복사에 실패했습니다.', 'Copy failed.')
           );
         });
+      });
+
+      document.getElementById('btn-download-tax-png').addEventListener('click', function () {
+        if (!lastTaxResult) return;
+        var r = lastTaxResult;
+        var vatStr = r.vat.isRefund
+          ? SM.formatCurrency(Math.abs(r.summary.annualVatPayable)) + SM.t(' 환급', ' Refund')
+          : SM.formatCurrency(r.summary.annualVatPayable);
+        var ok = SM.downloadReportCardPng({
+          filename: 'seller-math-tax-report-' + new Date().toISOString().slice(0, 10),
+          title: SM.t('대한민국 셀러 세무 · 과세 진단 리포트', 'Korean Seller Tax & Filing Report'),
+          subtitle: r.classification.title + ' · ' + r.incomeTax.bookkeepingLabel,
+          kpis: [
+            { label: SM.t('연환산 총매출', 'Annualized Sales'), value: SM.formatCurrency(r.summary.annualGrossSales), sub: r.spec.nameKo, tone: 'highlight' },
+            { label: SM.t('연간 예상 부가가치세', 'Est. Annual VAT'), value: vatStr, sub: r.vat.exemptApplied ? SM.t('4,800만 미만 면제', 'Exempt <48M') : SM.t('카드 1.3% 공제 반영', 'Incl. 1.3% credit'), tone: r.vat.isRefund ? 'positive' : 'highlight' },
+            { label: SM.t('종합소득세+지방세', 'Income + Local Tax'), value: SM.formatCurrency(r.summary.annualIncomeTaxTotal), sub: SM.t('세율 ' + r.incomeTax.actualBook.bracketRate + '% 구간', 'Bracket ' + r.incomeTax.actualBook.bracketRate + '%'), tone: '' },
+            { label: SM.t('세후 실질 순이익', 'After-Tax Net Profit'), value: SM.formatCurrency(r.summary.afterTaxNetProfit), sub: SM.t('월 권장 적립 ', 'Reserve ') + SM.formatCurrency(r.summary.monthlyTaxReserve), tone: r.summary.afterTaxNetProfit >= 0 ? 'positive' : 'negative' }
+          ],
+          rows: [
+            { label: SM.t('적용 법령 기준', 'Legal Basis'), value: r.classification.legalBasis },
+            { label: SM.t('세금계산서 발급 의무', 'Invoice Duty'), value: r.classification.invoiceDutyText },
+            { label: SM.t('장부 vs 추계 절세 추천', 'Books vs Rate'), value: r.incomeTax.recommendedMethodText },
+            { label: SM.t('부가세 일반 vs 간이 비교', 'VAT Comparison'), value: SM.t('일반 ', 'Gen ') + SM.formatCurrency(r.vat.comparison.generalVat) + ' / ' + SM.t('간이 ', 'Simp ') + SM.formatCurrency(r.vat.comparison.simplifiedVat) },
+            { label: SM.t('총 연간 세금 부담 합계', 'Total Annual Tax Burden'), value: SM.formatCurrency(r.summary.totalTaxBurden), bold: true, tone: 'negative' },
+            { label: SM.t('매월 세금 통장 권장 적립액', 'Monthly Tax Reserve'), value: SM.formatCurrency(r.summary.monthlyTaxReserve) + '/월', bold: true, tone: 'highlight' }
+          ]
+        });
+        if (ok) showToast(SM.t('세무 진단 리포트 PNG 이미지를 저장했습니다.', 'Saved Tax Report Card PNG.'));
       });
 
       document.getElementById('btn-print-tax').addEventListener('click', function () {

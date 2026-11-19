@@ -1947,6 +1947,129 @@ code {
   line-height: 1.5;
 }
 
+/* Market Preset Pills & 4-Tab Seller Workbench */
+.market-preset-bar {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.market-preset-title {
+  display: block;
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 7px;
+}
+
+.market-preset-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.market-preset-chip {
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  white-space: nowrap;
+}
+
+.market-preset-chip:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background-color: #eff6ff;
+}
+
+.market-preset-chip.active {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.workbench-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 12px;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 16px;
+}
+
+.workbench-tab-btn {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  padding: 9px 14px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.workbench-tab-btn:hover {
+  color: #0f172a;
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+.workbench-tab-btn.active {
+  background-color: #ffffff;
+  color: #1d4ed8;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+
+.workbench-pane {
+  padding-top: 4px;
+}
+
+.workbench-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .workbench-grid {
+    grid-template-columns: 380px 1fr;
+  }
+}
+
+.inventory-gauge-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background-color: #e2e8f0;
+  overflow: hidden;
+}
+
+.inventory-gauge-fill {
+  height: 100%;
+  border-radius: 999px;
+  background-color: #2563eb;
+  transition: width 0.25s ease;
+}
+
+.inventory-gauge-fill.is-danger {
+  background-color: #e11d48;
+}
+
 /* Print-Friendly Styles */
 @media print {
   body {
@@ -1963,6 +2086,8 @@ code {
   .column-map-panel,
   .tax-intake-grid,
   .preset-pill-row,
+  .market-preset-bar,
+  .workbench-tabs,
   .site-footer {
     display: none !important;
   }

@@ -113,6 +113,7 @@
                 <label for="cogs">상품 매입 원가 COGS (원)</label>
                 <input id="cogs" name="cogs" type="number" min="0" step="10" class="input-control">
               </div>
+              <div id="market-preset-container"></div>
               <div class="field">
                 <label for="feeBasisMode">수수료 부과 기준</label>
                 <select id="feeBasisMode" name="feeBasisMode" class="select-control">
@@ -256,6 +257,8 @@
           <div class="btn-row" style="margin-top: 16px;">
             <button type="button" class="btn btn-primary" id="btn-save-scenario">시나리오 비교함에 저장</button>
             <button type="button" class="btn btn-outline" id="btn-copy-summary">ROAS 분석 복사</button>
+            <button type="button" class="btn btn-outline" id="btn-share-url">계산 링크 복사</button>
+            <button type="button" class="btn btn-secondary" id="btn-download-png">리포트 이미지(PNG) 저장</button>
           </div>
           <div id="action-toast" class="toast-msg" aria-live="polite"></div>
         </section>
@@ -783,13 +786,69 @@
         });
       });
 
+      document.getElementById('btn-share-url').addEventListener('click', function () {
+        var url = SM.buildShareUrl(readInputsFromForm());
+        SM.copyTextToClipboard(url).then(function (ok) {
+          showToast(ok ? SM.t('ROAS 계산 조건 공유 링크를 복사했습니다.', 'Copied share link.') : SM.t('복사에 실패했습니다.', 'Copy failed.'));
+        });
+      });
+
+      document.getElementById('btn-download-png').addEventListener('click', function () {
+        if (!lastRoasResult) return;
+        var r = lastRoasResult;
+        var p = r.profitResult;
+        var ok = SM.downloadReportCardPng({
+          filename: 'seller-math-roas-' + new Date().toISOString().slice(0, 10),
+          title: (p.inputs.itemName || SM.t('손익분기 ROAS 리포트', 'Break-Even ROAS Report')),
+          subtitle: r.adRevenueBasisLabel + ' · ' + p.accountingBasisLabel,
+          kpis: [
+            { label: SM.t('손익분기 ROAS', 'Break-Even ROAS'), value: r.breakEvenRoasLabel, sub: SM.t('광고 적자 방어 마지노선', 'Zero-loss ad ceiling'), tone: 'highlight' },
+            { label: SM.t('최대 허용 CPA', 'Max Allowable CPA'), value: r.maxCpaLabel, sub: SM.t('건당 광고비 상한', 'Contribution C'), tone: '' },
+            { label: SM.t('현재 광고비 ROAS', 'Current ROAS'), value: r.currentRoasLabel, sub: SM.t('건당 광고비 ', 'Ad ') + SM.formatCurrency(p.recognizedAdSpend), tone: 'highlight' },
+            { label: SM.t('현재 건당 영업이익', 'Current Unit Profit'), value: SM.formatCurrency(p.operatingProfit), sub: SM.t('순마진율 ', 'Margin ') + p.netMarginLabel, tone: p.operatingProfit >= 0 ? 'positive' : 'negative' }
+          ],
+          rows: [
+            { label: SM.t('광고 귀속 매출 기준 금액', 'Ad-Attributed Revenue'), value: SM.formatCurrency(r.adRevenue) },
+            { label: SM.t('광고 전 공헌이익 (C)', 'Pre-Ad Contribution (C)'), value: SM.formatCurrency(r.contributionMargin), tone: 'positive' },
+            { label: SM.t('현재 건당 광고비 지출', 'Current Ad Spend'), value: '-' + SM.formatCurrency(p.recognizedAdSpend), tone: 'negative' },
+            { label: SM.t('플랫폼 정산 예정액', 'Est. Platform Payout'), value: SM.formatCurrency(p.platformSettlement) },
+            { label: SM.t('손익분기 최소 ROAS / 최대 CPA', 'Break-Even ROAS / Max CPA'), value: r.breakEvenRoasLabel + ' / ' + r.maxCpaLabel, bold: true, tone: 'highlight' }
+          ]
+        });
+        if (ok) showToast(SM.t('ROAS 리포트 이미지(PNG)를 저장했습니다.', 'Saved ROAS Report Card PNG.'));
+      });
+
+      var marketPresetsCtrl = SM.mountMarketPresetPills(
+        document.getElementById('market-preset-container'),
+        function (preset) {
+          var cur = readInputsFromForm();
+          cur.feeRate = preset.feeRate;
+          cur.shippingFeeRate = preset.shippingFeeRate;
+          cur.feeBasisMode = preset.feeBasisMode;
+          writeInputsToForm(cur);
+          renderResults();
+          showToast(SM.t(preset.nameKo + ' 수수료(' + preset.feeRate + '%) 기준이 적용되었습니다.', 'Applied ' + preset.nameEn + '.'));
+        }
+      );
+
+      form.addEventListener('input', function () {
+        if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+      });
+      form.addEventListener('change', function () {
+        if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(readInputsFromForm());
+      });
+
       SM.initI18n(PAGE_DICT, 'Break-Even ROAS & Max Allowable CPA Calculator | SELLER MATH');
       window.addEventListener('sellermath:langchange', function () {
         renderResults();
         refreshScenarios();
       });
-      writeInputsToForm(SM.loadSharedInputs());
+      var sharedFromUrl = SM.parseShareUrlParams(window.location.search);
+      var initialInputs = sharedFromUrl || SM.loadSharedInputs();
+      if (sharedFromUrl) SM.saveSharedInputs(sharedFromUrl);
+      writeInputsToForm(initialInputs);
       renderResults();
+      if (marketPresetsCtrl) marketPresetsCtrl.syncActiveByInputs(initialInputs);
       refreshScenarios();
     })();
   </script>
