@@ -11,7 +11,34 @@
   <meta property="og:title" content="목표 마진 판매가 동적 역산 계산기 | SELLER MATH">
   <meta property="og:description" content="대수 해법과 이진 탐색 수치해법, Round-Trip 자동 역검증을 결합해 오차 없는 목표 판매가를 역산하고 할인율별 수익 변화를 시뮬레이션합니다.">
   <meta property="og:url" content="https://seller-math.pages.dev/selling-price-calculator">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1d4ed8">
   <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Round-Trip 자동 역검증 배지는 어떤 원리로 작동하나요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "역산된 판매가를 다시 공통 순이익 계산기(SellerMath.calculateProfit)에 대입하여 목표 순이익 또는 목표 마진율이 허용 오차 내에서 실제로 일치하는지 교차 검증한 뒤 통과 시에만 표시합니다."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "수수료율과 목표 마진율 합계가 100% 이상이면 왜 계산이 차단되나요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "수수료와 할인율을 제외한 잔여 비율보다 높은 순마진율을 요구하면 판매가를 무한대로 올려도 도달할 수 없는 수학적 불능 상태이므로 오류 안내를 표시합니다."
+        }
+      }
+    ]
+  }
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",

@@ -1,0 +1,19 @@
+{
+  "name": "SELLER MATH — 쇼핑몰 정산·마진·세무 계산기",
+  "short_name": "SELLER MATH",
+  "description": "스마트스토어·쿠팡·오픈마켓 셀러를 위한 100% 브라우저 로컬 정산·순이익·ROAS·판매가·한국 세무 진단 도구",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f2f4f6",
+  "theme_color": "#1d4ed8",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

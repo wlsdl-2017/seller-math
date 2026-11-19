@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/">
+  <title>페이지를 찾을 수 없습니다 (404) | SELLER MATH</title>
+  <meta name="description" content="요청하신 페이지를 찾을 수 없습니다. SELLER MATH의 쇼핑몰 정산, 순이익, ROAS, 판매가 역산, 세무·과세 진단기 페이지로 바로 이동해 보세요.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1d4ed8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-title">SELLER MATH</span>
+        <span class="brand-sub">쇼핑몰 정산 · 마진 · ROAS 계산기</span>
+      </a>
+      <nav class="main-nav" aria-label="주 메뉴">
+        <a class="nav-link" href="index.html">종합 대시보드</a>
+        <a class="nav-link" href="profit-calculator.html">순이익·정산 계산기</a>
+        <a class="nav-link" href="roas-calculator.html">손익분기 ROAS</a>
+        <a class="nav-link" href="selling-price-calculator.html">판매가 역산기</a>
+        <a class="nav-link" href="tax-calculator.html">세무·과세 진단기</a>
+        <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="container">
+      <section class="hero-card">
+        <span class="hero-eyebrow" data-i18n-en="404 Not Found">404 페이지 안내</span>
+        <h1 data-i18n-en="The page you requested could not be found.">요청하신 페이지를 찾을 수 없습니다</h1>
+        <p class="hero-desc" data-i18n-en="The URL may have changed or been mistyped. Select any SELLER MATH calculator below to continue.">
+          주소가 잘못 입력되었거나 이동된 페이지입니다. 아래 메뉴에서 원하시는 셀러 계산기를 바로 열어보세요.
+        </p>
+      </section>
+
+      <section class="hub-grid" aria-label="주요 계산기 바로가기">
+        <article class="hub-card">
+          <div>
+            <span class="hub-tag">계산기 01</span>
+            <h2>순이익 · 마진율 · 엑셀/워크벤치</h2>
+            <p>정산 예정액, 영업이익, 7대 마켓 비교, 중국 사입 도착원가, 반품 손익분기, 엑셀 일괄 계산까지 한곳에서 이용하세요.</p>
+          </div>
+          <a class="btn btn-primary" href="profit-calculator.html">순이익 계산기 열기</a>
+        </article>
+        <article class="hub-card">
+          <div>
+            <span class="hub-tag">계산기 02</span>
+            <h2>손익분기 ROAS · 최대 CPA</h2>
+            <p>광고 집행 시 적자가 나지 않는 최소 ROAS와 건당 최대 광고비 한도를 확인합니다.</p>
+          </div>
+          <a class="btn btn-primary" href="roas-calculator.html">ROAS 계산기 열기</a>
+        </article>
+        <article class="hub-card">
+          <div>
+            <span class="hub-tag">계산기 03</span>
+            <h2>목표 마진 판매가 역산기</h2>
+            <p>쿠폰·수수료를 반영해 원하는 순이익이나 마진율을 맞추는 적정 판매가를 역산합니다.</p>
+          </div>
+          <a class="btn btn-primary" href="selling-price-calculator.html">판매가 역산기 열기</a>
+        </article>
+        <article class="hub-card">
+          <div>
+            <span class="hub-tag">계산기 04</span>
+            <h2>세무 · 과세유형 · 신고 진단기</h2>
+            <p>간이(1억 400만)·일반·면세 판정, 8단계 종소세 계산 및 홈택스 신고 일정을 안내합니다.</p>
+          </div>
+          <a class="btn btn-primary" href="tax-calculator.html">세무·과세 진단기 열기</a>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>SELLER MATH</strong> — 쇼핑몰 셀러 정산·마진·ROAS·판매가 역산 무료 웹 도구
+      </div>
+      <div class="footer-links">
+        <a href="index.html">종합 대시보드</a>
+        <a href="profit-calculator.html">순이익 계산기</a>
+        <a href="roas-calculator.html">ROAS 계산기</a>
+        <a href="selling-price-calculator.html">판매가 역산기</a>
+        <a href="tax-calculator.html">세무·과세 진단기</a>
+        <a href="legal.html">개인정보처리방침·이용약관·면책고지</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="common.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      if (window.SellerMath && typeof window.SellerMath.initI18n === 'function') {
+        window.SellerMath.initI18n({}, 'Page Not Found (404) | SELLER MATH');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -11,7 +11,34 @@
   <meta property="og:title" content="쇼핑몰 순이익·마진율·정산액 정밀 계산기 | SELLER MATH">
   <meta property="og:description" content="1단계 플랫폼 정산 내역과 2단계 셀러 손익 내역을 분리해 정산액 착시를 막아주는 쇼핑몰 순이익·VAT 계산기.">
   <meta property="og:url" content="https://seller-math.pages.dev/profit-calculator">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1d4ed8">
   <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "원가나 매출이 0원일 때 왜 ROI와 순마진율이 산출 불가로 표시되나요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "마진율은 이익을 매출로, ROI는 이익을 매입원가(COGS)로 나눈 비율이므로 분모가 0원 이하일 때 왜곡된 0%나 무한대 대신 안전하게 산출 불가를 표시합니다."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "입력한 판매가와 원가, 업로드한 엑셀 데이터는 서버에 저장되나요?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "아니요. SELLER MATH는 100% 정적 웹사이트로 서버 DB를 사용하지 않으며 모든 계산과 엑셀 파일 파싱이 브라우저 내부에서만 실행됩니다."
+        }
+      }
+    ]
+  }
+  </script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",

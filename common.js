@@ -1901,6 +1901,106 @@
     return next;
   }
 
+  var CURRENCY_HINT_INPUT_IDS = [
+    'listPrice', 'sellerDiscount', 'platformDiscount', 'cogs', 'customFeeBase',
+    'customerShipping', 'sellerShippingCost', 'adSpend', 'targetProfitAmount',
+    'tax-grossSales', 'tax-cogsTotal', 'tax-platformFeeTotal', 'tax-shippingCostTotal',
+    'tax-adSpendTotal', 'tax-otherExpenseTotal', 'tax-priorYearGrossSales', 'tax-extraDeduction'
+  ];
+  var currencyHintsBound = false;
+
+  function formatKoreanUnitCurrency(amount) {
+    var num = Number(amount);
+    if (!Number.isFinite(num)) return '';
+    var sign = num < 0 ? '-' : '';
+    var abs = Math.round(Math.abs(num));
+
+    if (currentLang === 'en') {
+      if (abs >= 1000000) {
+        return sign + formatNumber(abs) + ' KRW (' + (abs / 1000000).toFixed(1) + 'M)';
+      }
+      return sign + formatNumber(abs) + ' KRW';
+    }
+
+    if (abs === 0) return '0원';
+    if (abs < 10000) return sign + formatNumber(abs) + '원';
+
+    var jo = Math.floor(abs / 1000000000000);
+    var remJo = abs % 1000000000000;
+    var eok = Math.floor(remJo / 100000000);
+    var remEok = remJo % 100000000;
+    var man = Math.floor(remEok / 10000);
+    var won = remEok % 10000;
+
+    var parts = [];
+    if (jo > 0) parts.push(formatNumber(jo) + '조');
+    if (eok > 0) parts.push(formatNumber(eok) + '억');
+    if (man > 0) parts.push(formatNumber(man) + '만');
+
+    if (won > 0) {
+      return sign + parts.join(' ') + ' ' + formatNumber(won) + '원';
+    }
+    return sign + parts.join(' ') + ' 원';
+  }
+
+  function refreshCurrencyInputHints() {
+    if (typeof document === 'undefined') return;
+    CURRENCY_HINT_INPUT_IDS.forEach(function (id) {
+      var inputEl = document.getElementById(id);
+      if (!inputEl) return;
+      var hintEl = document.querySelector('[data-currency-hint-for="' + id + '"]');
+      if (!hintEl) return;
+
+      var raw = String(inputEl.value || '').trim();
+      if (raw === '') {
+        hintEl.textContent = '';
+        hintEl.hidden = true;
+        return;
+      }
+      var num = Number(raw);
+      if (!Number.isFinite(num)) {
+        hintEl.textContent = '';
+        hintEl.hidden = true;
+        return;
+      }
+      hintEl.hidden = false;
+      hintEl.textContent = '= ' + formatKoreanUnitCurrency(num);
+    });
+  }
+
+  function mountCurrencyInputHints() {
+    if (typeof document === 'undefined') return;
+    CURRENCY_HINT_INPUT_IDS.forEach(function (id) {
+      var inputEl = document.getElementById(id);
+      if (!inputEl || !inputEl.parentNode) return;
+      if (document.querySelector('[data-currency-hint-for="' + id + '"]')) return;
+
+      var hint = createEl('div', 'krw-unit-hint', '');
+      hint.setAttribute('data-currency-hint-for', id);
+      hint.setAttribute('aria-live', 'off');
+      if (inputEl.nextSibling) {
+        inputEl.parentNode.insertBefore(hint, inputEl.nextSibling);
+      } else {
+        inputEl.parentNode.appendChild(hint);
+      }
+    });
+
+    if (!currencyHintsBound) {
+      currencyHintsBound = true;
+      var scheduleRefresh = function () {
+        setTimeout(refreshCurrencyInputHints, 0);
+      };
+      document.addEventListener('input', refreshCurrencyInputHints);
+      document.addEventListener('change', refreshCurrencyInputHints);
+      document.addEventListener('click', scheduleRefresh);
+      if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+        window.addEventListener('sellermath:langchange', refreshCurrencyInputHints);
+      }
+    }
+
+    refreshCurrencyInputHints();
+  }
+
   function initI18n(pageDict, pageEnTitle) {
     activePageDict = pageDict || {};
     if (pageEnTitle) activePageTitles.en = pageEnTitle;
@@ -1920,6 +2020,7 @@
     }
 
     applyDomTranslations();
+    mountCurrencyInputHints();
   }
 
   /* ==========================================================================
@@ -4980,6 +5081,9 @@
     calculateRoas: calculateRoas,
     calculateReversePrice: calculateReversePrice,
     formatCurrency: formatCurrency,
+    formatKoreanUnitCurrency: formatKoreanUnitCurrency,
+    mountCurrencyInputHints: mountCurrencyInputHints,
+    refreshCurrencyInputHints: refreshCurrencyInputHints,
     formatNumber: formatNumber,
     formatPercent: formatPercent,
     escapeCsvCell: escapeCsvCell,

@@ -2070,6 +2070,15 @@ code {
   background-color: #e11d48;
 }
 
+.krw-unit-hint {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+  min-height: 16px;
+}
+
 /* Print-Friendly Styles */
 @media print {
   body {

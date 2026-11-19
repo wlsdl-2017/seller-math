@@ -82,3 +82,16 @@
   4. **선정산 수수료 · 사업자 대출이자 vs 마진 잠식 분석:** 선정산 연환산 실효금리(APR) 및 월 금융비용 vs 대출이자 대조(`calculateFinancingImpact`)
   5. **원클릭 계산 링크 복사(`buildShareUrl`/`parseShareUrlParams`) & 1장짜리 Canvas PNG 리포트 카드 저장(`downloadReportCardPng`)**
 - **사전 QA 검증:** `qa_verify.js` **12 / 12 PASS**, 인라인 JS 구문 **6 / 6 SYNTAX_OK**, DOM ID 무결성 **6 / 6 누락 없음**
+
+
+---
+
+### [보안·완성도 업데이트] 2026-11-19 — 무료 보안 헤더(`_headers`), 한글 금액 표기, 파비콘/PWA, FAQPage 스키마 & 404 추가 (비용 0원)
+- **보안 강화 (무과금 0원):**
+  - `_headers`: Cloudflare Pages 무료 플랜 기본 내장 기능으로 `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Content-Security-Policy(frame-ancestors 'none')` 적용하여 타 사이트 무단 `<iframe>` 도용 차단
+  - `legal.html`: 운영자 이메일 평문 노출 대신 `data-u`/`data-d` JS 조립 및 `[이메일 주소 복사]` 버튼으로 스팸 수집 봇 방어
+- **입력 실수 방지 & 브랜드/SEO 완성도:**
+  - `common.js` / `style.css`: 금액 입력칸 하단 실시간 한글 금액 단위 보조 표기(`= 2만 9,900원`, `= 1억 5,000만 원`) 자동 적용(`formatKoreanUnitCurrency`, `mountCurrencyInputHints`)
+  - `favicon.svg`, `manifest.json`, `404.html`: 전용 `₩` SVG 파비콘, 스마트폰 홈 화면 추가(PWA) 매니페스트, 404 안내 페이지 구축
+  - `profit-calculator.html`, `roas-calculator.html`, `selling-price-calculator.html`, `tax-calculator.html`: 검색 리치 스니펫용 `FAQPage` JSON-LD 구조화 데이터 추가
+- **사전 QA 검증:** `qa_verify.js` **13 / 13 PASS** (Test 13 포함), 인라인 JS 구문 **7 / 7 SYNTAX_OK**, DOM ID 무결성 **7 / 7 누락 없음**
