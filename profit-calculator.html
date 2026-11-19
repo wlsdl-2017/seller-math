@@ -65,12 +65,12 @@
         <span class="brand-sub">쇼핑몰 정산 · 마진 · ROAS 계산기</span>
       </a>
       <nav class="main-nav" aria-label="주 메뉴">
-        <a class="nav-link" href="index.html">종합 대시보드</a>
-        <a class="nav-link active" href="profit-calculator.html">순이익·정산 계산기</a>
-        <a class="nav-link" href="roas-calculator.html">손익분기 ROAS</a>
-        <a class="nav-link" href="selling-price-calculator.html">판매가 역산기</a>
-        <a class="nav-link" href="tax-calculator.html">세무·과세 진단기</a>
-        <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
+        <a class="nav-link" href="index.html">대시보드</a>
+        <a class="nav-link active" href="profit-calculator.html">순이익</a>
+        <a class="nav-link" href="roas-calculator.html">ROAS</a>
+        <a class="nav-link" href="selling-price-calculator.html">판매가 역산</a>
+        <a class="nav-link" href="tax-calculator.html">세무 진단</a>
+        <a class="nav-link" href="legal.html">약관</a>
       </nav>
     </div>
   </header>
@@ -95,41 +95,41 @@
           <div class="scenario-toolbar">
             <h2 class="card-title">판매 · 비용 조건 입력</h2>
             <div class="btn-row">
-              <button type="button" class="btn btn-ghost" id="btn-reset-default">기본값(30,000원)</button>
+              <button type="button" class="btn btn-ghost" id="btn-reset-default">초기화</button>
             </div>
           </div>
 
           <form id="profit-form" novalidate>
-            <div class="form-section-label">1. 상품 가격 및 쿠폰 부담</div>
+            <div class="form-section-label">1. 가격 및 쿠폰</div>
             <div class="form-grid">
               <div class="field">
-                <label for="itemName">상품명 / 메모 (시나리오 저장용)</label>
+                <label for="itemName">상품명 / 메모</label>
                 <input id="itemName" name="itemName" type="text" class="input-control" maxlength="80" placeholder="예: 여름 린넨 셔츠">
               </div>
               <div class="field">
-                <label for="listPrice">등록 정가 (원)</label>
+                <label for="listPrice">판매가 (원)</label>
                 <input id="listPrice" name="listPrice" type="number" min="0" step="10" class="input-control">
               </div>
               <div class="form-grid-2">
                 <div class="field">
-                  <label for="sellerDiscount">판매자 부담 할인액 (원)</label>
+                  <label for="sellerDiscount">판매자 할인 (원)</label>
                   <input id="sellerDiscount" name="sellerDiscount" type="number" min="0" step="10" class="input-control">
                 </div>
                 <div class="field">
-                  <label for="platformDiscount">플랫폼 부담 쿠폰 (원)</label>
+                  <label for="platformDiscount">플랫폼 쿠폰 (원)</label>
                   <input id="platformDiscount" name="platformDiscount" type="number" min="0" step="10" class="input-control">
                 </div>
               </div>
               <label class="checkbox-row">
                 <input id="platformSubsidyReimbursed" name="platformSubsidyReimbursed" type="checkbox">
-                <span>플랫폼 쿠폰 지원금을 정산 시 판매자에게 보전함</span>
+                <span>플랫폼 쿠폰 정산 시 보전</span>
               </label>
             </div>
 
-            <div class="form-section-label">2. 매입 원가 · 배송비 · 마켓 수수료</div>
+            <div class="form-section-label">2. 원가 · 배송 · 수수료</div>
             <div class="form-grid">
               <div class="field">
-                <label for="cogs">상품 매입 원가 COGS (원)</label>
+                <label for="cogs">매입 원가 (원)</label>
                 <input id="cogs" name="cogs" type="number" min="0" step="10" class="input-control">
               </div>
               <div id="market-preset-container"></div>
@@ -144,11 +144,11 @@
               </div>
               <div class="form-grid-2" id="standard-fee-rate-wrap">
                 <div class="field">
-                  <label for="feeRate">마켓 판매 수수료율 (%)</label>
+                  <label for="feeRate">마켓 수수료 (%)</label>
                   <input id="feeRate" name="feeRate" type="number" min="0" max="100" step="0.01" class="input-control">
                 </div>
                 <div class="field">
-                  <label for="shippingFeeRate">배송비 별도 수수료율 (%)</label>
+                  <label for="shippingFeeRate">배송비 수수료 (%)</label>
                   <input id="shippingFeeRate" name="shippingFeeRate" type="number" min="0" max="100" step="0.01" class="input-control">
                 </div>
               </div>
@@ -169,17 +169,17 @@
 
               <div class="form-grid-2">
                 <div class="field">
-                  <label for="customerShipping">고객 결제 배송비 (원)</label>
+                  <label for="customerShipping">고객 배송비 (원)</label>
                   <input id="customerShipping" name="customerShipping" type="number" min="0" step="10" class="input-control">
                 </div>
                 <div class="field">
-                  <label for="sellerShippingCost">판매자 실부담 택배 원가 (원)</label>
+                  <label for="sellerShippingCost">실제 택배비 (원)</label>
                   <input id="sellerShippingCost" name="sellerShippingCost" type="number" min="0" step="10" class="input-control">
                 </div>
               </div>
             </div>
 
-            <div class="form-section-label">3. 광고비 및 월간 판매량 가정</div>
+            <div class="form-section-label">3. 광고 · 월 판매량</div>
             <div class="form-grid">
               <div class="field">
                 <label for="adSpend">건당 광고비 (원)</label>
@@ -187,11 +187,11 @@
               </div>
               <div class="form-grid-2">
                 <div class="field">
-                  <label for="dailyVolume">일일 예상 판매량 (건)</label>
+                  <label for="dailyVolume">일 판매량 (건)</label>
                   <input id="dailyVolume" name="dailyVolume" type="number" min="0" step="1" class="input-control">
                 </div>
                 <div class="field">
-                  <label for="monthlyDays">월 영업일수 (일)</label>
+                  <label for="monthlyDays">월 판매일 (일)</label>
                   <input id="monthlyDays" name="monthlyDays" type="number" min="0" step="1" class="input-control">
                 </div>
               </div>
@@ -280,11 +280,11 @@
           </form>
 
           <div class="btn-row" style="margin-top: 16px;">
-            <button type="button" class="btn btn-primary" id="btn-save-scenario">시나리오 비교함에 저장</button>
-            <button type="button" class="btn btn-outline" id="btn-copy-summary">계산 요약 복사</button>
-            <button type="button" class="btn btn-outline" id="btn-share-url">계산 링크 복사</button>
-            <button type="button" class="btn btn-secondary" id="btn-download-png">리포트 이미지(PNG) 저장</button>
-            <button type="button" class="btn btn-ghost" id="btn-print-page">인쇄 / PDF 저장</button>
+            <button type="button" class="btn btn-primary" id="btn-save-scenario">비교함 저장</button>
+            <button type="button" class="btn btn-outline" id="btn-copy-summary">요약 복사</button>
+            <button type="button" class="btn btn-outline" id="btn-share-url">링크 복사</button>
+            <button type="button" class="btn btn-secondary" id="btn-download-png">PNG 리포트</button>
+            <button type="button" class="btn btn-ghost" id="btn-print-page">인쇄</button>
           </div>
           <div id="action-toast" class="toast-msg" aria-live="polite"></div>
         </section>
@@ -295,6 +295,7 @@
             <h2 class="card-title">수익 분석 핵심 지표</h2>
             <p class="card-subtitle">모든 지표는 단일 공통 회계 엔진에서 실시간으로 산출됩니다.</p>
             <div id="profit-kpi-grid" class="kpi-grid"></div>
+            <div id="profit-split-bar"></div>
 
             <!-- 월간 예상 정산액 및 순이익 계산기 -->
             <div class="chart-container" id="monthly-sim-box">
@@ -671,7 +672,8 @@
           kpiGrid.appendChild(card);
         });
 
-        // Monthly KPI Cards
+        // Revenue Split Bar & Monthly KPI Cards
+        SM.renderRevenueSplitBar(document.getElementById('profit-split-bar'), res);
         SM.clearEl(monthlyGrid);
         var mKpis = [
           {

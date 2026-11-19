@@ -1344,10 +1344,7 @@
     var basisBadge = createEl(
       'div',
       'basis-banner',
-      t('적용 회계 기준: ', 'Accounting Basis: ') +
-        result.accountingBasisLabel +
-        t(' | 과세 유형: ', ' | Taxpayer Type: ') +
-        result.taxEstimate.taxpayerLabel
+      result.accountingBasisLabel + ' · ' + result.taxEstimate.taxpayerLabel
     );
     container.appendChild(basisBadge);
 
@@ -1356,7 +1353,7 @@
         'div',
         'alert-box alert-warning',
         t(
-          '주의: 판매자 부담 할인과 플랫폼 쿠폰 합계가 등록 정가를 초과하여 고객 실결제가는 0원(하한)으로 처리되었습니다.',
+          '주의: 할인 합계가 판매가를 초과해 고객 실결제가는 0원 처리됩니다.',
           'Warning: Combined discounts exceed list price; customer payment is floored at 0 KRW.'
         )
       );
@@ -1370,32 +1367,32 @@
     var stage1 = createEl('section', 'waterfall-card');
     var s1Header = createEl('div', 'waterfall-header');
     s1Header.appendChild(createEl('span', 'stage-pill stage-1', t('1단계', 'Stage 1')));
-    s1Header.appendChild(createEl('h3', 'waterfall-title', t('플랫폼 정산 내역 (통장 입금 예정 기준)', 'Platform Settlement Breakdown (Bank Payout Basis)')));
+    s1Header.appendChild(createEl('h3', 'waterfall-title', t('마켓 정산 입금액', 'Marketplace Payout')));
     stage1.appendChild(s1Header);
 
     var s1List = createEl('ul', 'waterfall-list');
     var s1Rows = [
-      { label: t('등록 판매가', 'List Price'), value: formatCurrency(result.listPrice), type: 'base' },
-      { label: t('판매자 부담 할인', 'Seller Discount'), value: result.sellerDiscount > 0 ? '-' + formatCurrency(result.sellerDiscount) : zeroCur, type: 'minus' },
+      { label: t('판매가', 'List Price'), value: formatCurrency(result.listPrice), type: 'base' },
+      { label: t('판매자 할인', 'Seller Discount'), value: result.sellerDiscount > 0 ? '-' + formatCurrency(result.sellerDiscount) : zeroCur, type: 'minus' },
       {
         label: inp.platformSubsidyReimbursed
-          ? t('플랫폼 쿠폰 할인 (정산 시 보전)', 'Platform Coupon (Reimbursed)')
-          : t('플랫폼 쿠폰 할인 (미보전·매출 차감)', 'Platform Coupon (Not Reimbursed)'),
+          ? t('플랫폼 쿠폰 (보전)', 'Platform Coupon (Reimb.)')
+          : t('플랫폼 쿠폰 (차감)', 'Platform Coupon (Unreimb.)'),
         value: result.platformDiscount > 0 ? '-' + formatCurrency(result.platformDiscount) : zeroCur,
         type: 'minus'
       },
-      { label: t('고객 실결제 상품가', 'Buyer Paid Price'), value: formatCurrency(result.customerPayment), type: 'subtotal' },
+      { label: t('고객 실결제가', 'Buyer Paid Price'), value: formatCurrency(result.customerPayment), type: 'subtotal' },
       {
         label: inp.platformSubsidyReimbursed
-          ? t('플랫폼 쿠폰 보전금', 'Coupon Reimbursement')
-          : t('플랫폼 쿠폰 보전금 (해당 없음)', 'Coupon Reimbursement (None)'),
+          ? t('쿠폰 보전금', 'Coupon Reimbursement')
+          : t('쿠폰 보전금 (없음)', 'Coupon Reimb. (None)'),
         value: result.platformSubsidyRecognized > 0 ? '+' + formatCurrency(result.platformSubsidyRecognized) : zeroCur,
         type: 'plus'
       },
-      { label: t('판매자 귀속 상품 매출', 'Seller Product Revenue'), value: formatCurrency(result.sellerProductRevenue), type: 'subtotal' },
-      { label: t('고객 결제 배송비', 'Customer Shipping Paid'), value: result.customerShipping > 0 ? '+' + formatCurrency(result.customerShipping) : zeroCur, type: 'plus' },
-      { label: t('마켓 수수료 합계 (', 'Marketplace Fee Total (') + result.feeBasisLabel + ')', value: result.feeVat.cash > 0 ? '-' + formatCurrency(result.feeVat.cash) : zeroCur, type: 'minus' },
-      { label: t('플랫폼 정산 예정액 (원가·택배·광고 차감 전)', 'Estimated Platform Payout (Before Costs & Ads)'), value: formatCurrency(result.platformSettlement), type: 'total' }
+      { label: t('판매자 귀속매출', 'Seller Product Rev'), value: formatCurrency(result.sellerProductRevenue), type: 'subtotal' },
+      { label: t('고객 배송비', 'Customer Shipping'), value: result.customerShipping > 0 ? '+' + formatCurrency(result.customerShipping) : zeroCur, type: 'plus' },
+      { label: t('마켓 수수료 (' + result.feeBasisLabel + ')', 'Market Fee (' + result.feeBasisLabel + ')'), value: result.feeVat.cash > 0 ? '-' + formatCurrency(result.feeVat.cash) : zeroCur, type: 'minus' },
+      { label: t('1단계 정산 입금액', 'Stage 1 Est. Payout'), value: formatCurrency(result.platformSettlement), type: 'total' }
     ];
 
     s1Rows.forEach(function (row) {
@@ -1416,8 +1413,8 @@
         'h3',
         'waterfall-title',
         t(
-          '셀러 손익 계산 내역 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 손익 기준' : 'VAT 포함 현금 기준') + ')',
-          'Seller P&L Breakdown (' + (inp.accountingBasis === 'supply_basis' ? 'Supply-Value Basis' : 'VAT-Inclusive Cash Basis') + ')'
+          '실제 셀러 순이익 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액' : '현금 기준') + ')',
+          'Seller Net Profit (' + (inp.accountingBasis === 'supply_basis' ? 'Supply' : 'Cash') + ')'
         )
       )
     );
@@ -1425,17 +1422,14 @@
 
     var s2List = createEl('ul', 'waterfall-list');
     var s2Rows = [
-      { label: t('순매출 (배송비 수익 포함)', 'Net Revenue (Incl. Shipping)'), value: formatCurrency(result.recognizedRevenue), type: 'base' },
+      { label: t('순매출 (배송 포함)', 'Net Revenue'), value: formatCurrency(result.recognizedRevenue), type: 'base' },
       { label: t('마켓 수수료', 'Marketplace Fee'), value: result.recognizedFee > 0 ? '-' + formatCurrency(result.recognizedFee) : zeroCur, type: 'minus' },
-      { label: t('상품 매입 원가', 'Product Cost (COGS)'), value: result.recognizedCogs > 0 ? '-' + formatCurrency(result.recognizedCogs) : zeroCur, type: 'minus' },
-      { label: t('판매자 부담 택배비', 'Seller Courier Cost'), value: result.recognizedShipping > 0 ? '-' + formatCurrency(result.recognizedShipping) : zeroCur, type: 'minus' },
-      { label: t('광고비 차감 전 공헌이익', 'Pre-Ad Contribution Margin'), value: formatCurrency(result.contributionMargin), type: 'subtotal-accent' },
-      { label: t('건당 광고비', 'Ad Spend per Order'), value: result.recognizedAdSpend > 0 ? '-' + formatCurrency(result.recognizedAdSpend) : zeroCur, type: 'minus' },
+      { label: t('매입 원가', 'Product COGS'), value: result.recognizedCogs > 0 ? '-' + formatCurrency(result.recognizedCogs) : zeroCur, type: 'minus' },
+      { label: t('택배 원가', 'Courier Cost'), value: result.recognizedShipping > 0 ? '-' + formatCurrency(result.recognizedShipping) : zeroCur, type: 'minus' },
+      { label: t('광고 전 공헌이익', 'Contribution Margin'), value: formatCurrency(result.contributionMargin), type: 'subtotal-accent' },
+      { label: t('건당 광고비', 'Ad Spend'), value: result.recognizedAdSpend > 0 ? '-' + formatCurrency(result.recognizedAdSpend) : zeroCur, type: 'minus' },
       {
-        label: t(
-          '최종 영업 추정 이익 (' + (inp.accountingBasis === 'supply_basis' ? '공급가액 기준' : '현금 기준') + ')',
-          'Est. Operating Profit (' + (inp.accountingBasis === 'supply_basis' ? 'Supply Basis' : 'Cash Basis') + ')'
-        ),
+        label: t('2단계 실질 순이익', 'Stage 2 Net Profit'),
         value: formatCurrency(result.operatingProfit),
         type: result.operatingProfit >= 0 ? 'total-profit' : 'total-loss'
       }
@@ -1456,7 +1450,7 @@
     var taxBox = createEl('section', 'tax-reference-card');
     var taxHead = createEl('div', 'tax-ref-header');
     taxHead.appendChild(createEl('span', 'stage-pill stage-tax', t('세무 참고', 'Tax Ref.')));
-    taxHead.appendChild(createEl('h3', 'waterfall-title', t('예상 부가세 정산 추정 (현금 정산·손익과 분리 표시)', 'Estimated VAT Reference (Separated from Payout & P&L)')));
+    taxHead.appendChild(createEl('h3', 'waterfall-title', t('예상 부가세 (참고)', 'Est. VAT Reference')));
     taxBox.appendChild(taxHead);
 
     var taxSummary = createEl('div', 'tax-summary-row');
@@ -1535,6 +1529,80 @@
     });
     details.appendChild(detailBody);
     container.appendChild(details);
+  }
+
+  /**
+   * 실시간 매출 구성비 컬러 스플릿 바 렌더러 (원가 · 수수료 · 택배/광고 · 순이익 비중)
+   */
+  function renderRevenueSplitBar(container, profitResult) {
+    if (!container || typeof document === 'undefined') return;
+    clearEl(container);
+
+    if (!profitResult || profitResult.recognizedRevenue <= 0) {
+      var emptyNote = createEl(
+        'div',
+        'split-bar-empty',
+        t('매출 0원 — 판매가를 입력하면 원가·수수료·순이익 비중 바가 표시됩니다.', 'Revenue is 0 KRW — enter a price to visualize cost & profit ratios.')
+      );
+      container.appendChild(emptyNote);
+      return;
+    }
+
+    var rev = profitResult.recognizedRevenue;
+    var cogs = Math.max(0, profitResult.recognizedCogs || 0);
+    var fee = Math.max(0, profitResult.recognizedFee || 0);
+    var logisticsAd = Math.max(0, (profitResult.recognizedShipping || 0) + (profitResult.recognizedAdSpend || 0));
+    var netProfit = profitResult.operatingProfit || 0;
+    var isLoss = netProfit < 0;
+
+    var denom = isLoss ? Math.max(rev, cogs + fee + logisticsAd) : rev;
+    var segments = [
+      { key: 'cogs', label: t('원가', 'COGS'), amount: cogs, pct: (cogs / rev) * 100, widthPct: (cogs / denom) * 100, cls: 'seg-cogs' },
+      { key: 'fee', label: t('수수료', 'Fee'), amount: fee, pct: (fee / rev) * 100, widthPct: (fee / denom) * 100, cls: 'seg-fee' },
+      { key: 'ad', label: t('택배·광고', 'Ship/Ad'), amount: logisticsAd, pct: (logisticsAd / rev) * 100, widthPct: (logisticsAd / denom) * 100, cls: 'seg-ad' },
+      {
+        key: 'profit',
+        label: isLoss ? t('순손실', 'Loss') : t('순이익', 'Profit'),
+        amount: netProfit,
+        pct: (netProfit / rev) * 100,
+        widthPct: isLoss ? 0 : (Math.max(0, netProfit) / denom) * 100,
+        cls: isLoss ? 'seg-loss' : 'seg-profit'
+      }
+    ];
+
+    var wrap = createEl('div', 'split-bar-wrap');
+    var header = createEl('div', 'split-bar-header');
+    header.appendChild(createEl('span', 'split-bar-title', t('매출 대비 비용 · 순이익 구조', 'Revenue Structure Breakdown')));
+    header.appendChild(
+      createEl(
+        'span',
+        'split-bar-total',
+        t('순매출 ', 'Rev ') + formatCurrency(rev)
+      )
+    );
+    wrap.appendChild(header);
+
+    var track = createEl('div', 'split-bar-track');
+    segments.forEach(function (seg) {
+      if (seg.widthPct <= 0.1) return;
+      var bar = createEl('div', 'split-bar-seg ' + seg.cls);
+      bar.style.width = seg.widthPct.toFixed(2) + '%';
+      bar.title = seg.label + ': ' + formatCurrency(seg.amount) + ' (' + seg.pct.toFixed(1) + '%)';
+      track.appendChild(bar);
+    });
+    wrap.appendChild(track);
+
+    var legend = createEl('div', 'split-bar-legend');
+    segments.forEach(function (seg) {
+      var item = createEl('div', 'split-legend-item');
+      item.appendChild(createEl('span', 'split-dot ' + seg.cls));
+      item.appendChild(createEl('span', 'split-legend-name', seg.label));
+      item.appendChild(createEl('strong', 'split-legend-pct ' + (seg.key === 'profit' && isLoss ? 'is-loss' : ''), seg.pct.toFixed(1) + '%'));
+      legend.appendChild(item);
+    });
+    wrap.appendChild(legend);
+
+    container.appendChild(wrap);
   }
 
   /**
@@ -1709,6 +1777,42 @@
    * 공용 다국어(KO/EN) 번역 사전 및 XSS-안전 DOM 번역 엔진
    */
   var COMMON_I18N_MAP = {
+    '대시보드': 'Dashboard',
+    '순이익': 'Profit',
+    'ROAS': 'ROAS',
+    '판매가 역산': 'Price',
+    '세무 진단': 'Tax',
+    '약관': 'Legal',
+    '초기화': 'Reset',
+    '목표 8,000원': 'Target 8K',
+    '판매가 (원)': 'List Price (KRW)',
+    '매입원가 (원)': 'COGS (KRW)',
+    '판매자 할인 (원)': 'Seller Discount (KRW)',
+    '플랫폼 쿠폰 (원)': 'Platform Coupon (KRW)',
+    '플랫폼 쿠폰 정산 시 보전': 'Platform Coupon Reimbursed',
+    '매입 원가 (원)': 'COGS (KRW)',
+    '마켓 수수료 (%)': 'Market Fee (%)',
+    '배송비 수수료 (%)': 'Shipping Fee (%)',
+    '고객 배송비 (원)': 'Customer Shipping (KRW)',
+    '실제 택배비 (원)': 'Courier Cost (KRW)',
+    '일 판매량 (건)': 'Daily Orders',
+    '월 판매일 (일)': 'Days / Month',
+    '1. 가격 및 쿠폰': '1. Price & Coupons',
+    '2. 원가 · 배송 · 수수료': '2. COGS, Shipping & Fees',
+    '3. 광고 · 월 판매량': '3. Ad Spend & Monthly Volume',
+    '3. 광고비 · 월 판매량': '3. Ad Spend & Monthly Volume',
+    '1. 가격 · 광고 매출 기준': '1. Price & Ad Revenue Basis',
+    '광고 매출 집계 기준': 'Ad Revenue Basis',
+    '네이버·메타 광고관리자 전환 기준과 일치시키세요.': 'Match conversion revenue basis with Naver/Meta Ads.',
+    '1. 목표 수익 기준': '1. Target Profit Basis',
+    '2. 쿠폰 · 할인 조건': '2. Coupon & Discount Terms',
+    '3. 원가 · 수수료 · 배송 · 광고': '3. COGS, Fees, Shipping & Ads',
+    '비교함 저장': 'Save',
+    '요약 복사': 'Copy',
+    '링크 복사': 'Share',
+    'PNG 리포트': 'PNG',
+    '인쇄': 'Print',
+    '가격 계산기 반영': 'Sync Price',
     '쇼핑몰 셀러 정산·마진·ROAS 통합 회계 엔진': 'Seller Settlement, Margin & ROAS Calculator',
     '쇼핑몰 정산 · 마진 · ROAS 계산기': 'Seller Settlement, Margin & ROAS Calculator',
     '종합 대시보드': 'Dashboard',
@@ -2113,13 +2217,13 @@
       upsertDrawerBar(workbenchEl.parentElement, {
         key: 'workbench',
         getBadge: function () {
-          return t('추가 도구 1', 'Extra Tool 1');
+          return t('확장 도구 1', 'Tool 1');
         },
         getTitle: function () {
-          return t('수입 원가 · 채널 비교 · 반품 리스크 · 정산 자금 시뮬레이터', 'Import COGS · Channel Compare · Return Risk · Cashflow Workbench');
+          return t('마켓 비교 · 수입원가 · 반품 · 선정산 · 옵션묶음 시뮬레이터', 'Markets · Import · Returns · Financing · Bundle Simulator');
         },
         getSubtitle: function () {
-          return t('펼쳐서 마켓별 수수료 비교와 반품·선정산 손익을 바로 계산하세요', 'Expand for multi-channel fee comparison, return loss & cashflow tools');
+          return t('7대 채널 비교 및 옵션 추가금·묶음배송 마진 분석', '7-market compare & bundle/option margin simulation');
         }
       });
     }
@@ -2129,13 +2233,13 @@
       upsertDrawerBar(bulkEl.parentElement, {
         key: 'bulk-excel',
         getBadge: function () {
-          return hasWorkbench ? t('추가 도구 2', 'Extra Tool 2') : t('일괄 계산', 'Batch Tool');
+          return hasWorkbench ? t('확장 도구 2', 'Tool 2') : t('엑셀 일괄', 'Batch Excel');
         },
         getTitle: function () {
           return t('엑셀 · CSV 파일 일괄 수익 계산기', 'Batch Excel & CSV Profit Calculator');
         },
         getSubtitle: function () {
-          return t('보유 중인 매출·원가 파일을 올려 여러 상품을 한 번에 계산합니다', 'Upload spreadsheets locally to compute multi-SKU profit & payout at once');
+          return t('스마트스토어·쿠팡 정산서 및 CSV 업로드 계산', 'SmartStore/Coupang exports & multi-SKU spreadsheets');
         }
       });
     }
@@ -2145,13 +2249,77 @@
       upsertDrawerBar(scenarioEl.parentElement, {
         key: 'scenario',
         getBadge: function () {
-          return hasWorkbench ? t('추가 도구 3', 'Extra Tool 3') : t('비교함', 'Compare');
+          return hasWorkbench ? t('확장 도구 3', 'Tool 3') : t('비교함', 'Compare');
         },
         getTitle: function () {
           return t('저장된 상품 시나리오 비교함', 'Saved Product Scenario Comparison');
         },
         getSubtitle: function () {
-          return t('시나리오 저장 버튼을 누른 상품들의 마진과 ROAS를 나란히 비교합니다', 'Compare margins and ROAS across your saved SKU scenarios');
+          return t('저장한 상품 마진 및 ROAS 나란히 비교', 'Compare saved product margins & ROAS');
+        }
+      });
+    }
+
+    var formulaCardEl = document.getElementById('formula-summary-card');
+    if (formulaCardEl && formulaCardEl.classList.contains('card')) {
+      upsertDrawerBar(formulaCardEl, {
+        key: 'formula-summary',
+        getBadge: function () {
+          return t('공식 요약', 'Formulas');
+        },
+        getTitle: function () {
+          return t('단일 공통 회계 산식 요약표', 'Unified Accounting Formula Summary');
+        },
+        getSubtitle: function () {
+          return t('매출 · 정산액 · 공헌이익 · ROAS 수학 정의 확인', 'Core payout, contribution margin & ROAS definitions');
+        }
+      });
+    }
+
+    var wfEl = document.getElementById('waterfall-container');
+    if (!document.getElementById('profit-kpi-grid') && wfEl && wfEl.parentElement && wfEl.parentElement.classList.contains('card')) {
+      upsertDrawerBar(wfEl.parentElement, {
+        key: 'waterfall-audit',
+        getBadge: function () {
+          return t('정산 검증', 'Audit');
+        },
+        getTitle: function () {
+          return t('2단계 정산 및 손익 상세 내역 (Waterfall)', '2-Stage Settlement & P&L Breakdown');
+        },
+        getSubtitle: function () {
+          return t('정산 입금액과 실제 영업이익, 부가세 산출 근거 대조', 'Verify cash payout, operating profit & VAT steps');
+        }
+      });
+    }
+
+    var bracketBoxEl = document.getElementById('bracket-table-box');
+    if (bracketBoxEl && bracketBoxEl.parentElement && bracketBoxEl.parentElement.classList.contains('card')) {
+      upsertDrawerBar(bracketBoxEl.parentElement, {
+        key: 'tax-brackets',
+        getBadge: function () {
+          return t('세율표', 'Rates');
+        },
+        getTitle: function () {
+          return t('종합소득세 8단계 누진세율표', '8-Bracket Income Tax Rate Table');
+        },
+        getSubtitle: function () {
+          return t('현행 6% ~ 45% 구간별 누진공제 및 과세표준 위치', 'Current 6%–45% brackets and your taxable tier');
+        }
+      });
+    }
+
+    var filingBoxEl = document.getElementById('filing-schedule-box');
+    if (filingBoxEl && filingBoxEl.parentElement && filingBoxEl.parentElement.classList.contains('card')) {
+      upsertDrawerBar(filingBoxEl.parentElement, {
+        key: 'tax-filing',
+        getBadge: function () {
+          return t('신고 일정', 'Schedule');
+        },
+        getTitle: function () {
+          return t('홈택스 신고 경로 및 캘린더', 'HomeTax Filing Paths & Calendar');
+        },
+        getSubtitle: function () {
+          return t('부가세 · 종합소득세 신고 기한과 홈택스 메뉴 안내', 'VAT & Income Tax deadlines and menu paths');
         }
       });
     }
@@ -2257,11 +2425,11 @@
      ========================================================================== */
 
   var BULK_FIELD_SPECS = [
-    { key: 'itemName', ko: '상품명', en: 'Product Name', keywords: ['상품명', '품목명', '품목', '옵션명', '제품명', '주문상품', '아이템', '상품', 'productname', 'itemname', 'product', 'item', 'sku', 'title', 'name'] },
-    { key: 'listPrice', ko: '정상가/판매가', en: 'Selling Price', keywords: ['판매단가', '정상가', '판매가', '소비자가', '정가', '결제금액', '매출액', '단가', 'sellingprice', 'saleprice', 'listprice', 'unitprice', 'price', 'revenue'] },
+    { key: 'itemName', ko: '상품명', en: 'Product Name', keywords: ['상품명', '품목명', '품목', '옵션명', '옵션정보', '제품명', '주문상품', '아이템', '상품', 'productname', 'itemname', 'product', 'item', 'sku', 'title', 'name'] },
+    { key: 'listPrice', ko: '정상가/판매가', en: 'Selling Price', keywords: ['정산기준금액', '판매총액', '판매단가', '정상가', '판매가', '소비자가', '정가', '결제금액', '매출액', '단가', 'sellingprice', 'saleprice', 'listprice', 'unitprice', 'price', 'revenue'] },
     { key: 'cogs', ko: '매입원가', en: 'COGS (Unit Cost)', keywords: ['매입원가', '공급원가', '제품원가', '사입원가', '도매가', '사입가', '매입가', '공급가', '원가', 'unitcost', 'wholesale', 'cogs', 'cost'] },
-    { key: 'feeRate', ko: '수수료 (% 또는 원)', en: 'Fee (% or Fixed)', keywords: ['마켓수수료', '판매수수료', '플랫폼수수료', '수수료율', '수수료', 'commissionrate', 'referralfee', 'feerate', 'commission', 'fee'] },
-    { key: 'sellerDiscount', ko: '판매자할인', en: 'Seller Discount', keywords: ['판매자부담할인', '판매자할인', '즉시할인', '자사쿠폰', '판매자쿠폰', '할인금액', '할인', 'sellerdiscount', 'discount', 'coupon'] },
+    { key: 'feeRate', ko: '수수료 (% 또는 원)', en: 'Fee (% or Fixed)', keywords: ['주문관리수수료', '매출연동수수료', '서비스이용료', '마켓수수료', '판매수수료', '플랫폼수수료', '수수료율', '수수료', 'commissionrate', 'referralfee', 'feerate', 'commission', 'fee'] },
+    { key: 'sellerDiscount', ko: '판매자할인', en: 'Seller Discount', keywords: ['판매자부담쿠폰할인', '판매자할인쿠폰', '판매자부담할인', '판매자할인', '즉시할인', '자사쿠폰', '판매자쿠폰', '할인금액', '할인', 'sellerdiscount', 'discount', 'coupon'] },
     { key: 'platformDiscount', ko: '플랫폼할인', en: 'Platform Discount', keywords: ['플랫폼할인', '마켓지원할인', '네이버지원할인', '플랫폼쿠폰', '지원할인', 'platformdiscount', 'marketdiscount'] },
     { key: 'sellerShippingCost', ko: '실택배비(원가)', en: 'Seller Shipping Cost', keywords: ['판매자배송비', '출고배송비', '실택배비', '택배비', '배송원가', '물류비', '포장배송비', '포장비', '운임', 'shippingcost', 'fulfillment', 'freight'] },
     { key: 'customerShipping', ko: '고객부담배송비', en: 'Customer Shipping', keywords: ['고객부담배송비', '고객결제배송비', '고객배송비', '수취배송비', '유료배송비', '결제배송비', 'customershipping', 'shippingcharged', 'deliveryfee'] },
@@ -3092,10 +3260,10 @@
       titleBox.appendChild(
         createEl(
           'p',
-          'card-subtitle',
+          'card-subtitle bulk-excel-sub',
           t(
-            '매출·원가 엑셀 파일을 끌어다 놓거나 표를 Ctrl+V로 붙여넣으면 여러 상품의 정산액·순이익·적자 여부를 1초 만에 일괄 계산합니다.',
-            'Drop your Excel/CSV sheet or paste cells (Ctrl+V) to compute settlement, net profit, and loss alerts across all SKUs at once.'
+            '매출·원가 파일을 올려 여러 상품의 정산액과 순이익을 1초 만에 일괄 계산합니다.',
+            'Upload Excel/CSV or paste rows (Ctrl+V) to batch-compute settlement & profit.'
           )
         )
       );
@@ -3104,7 +3272,7 @@
         createEl(
           'span',
           'bulk-privacy-badge',
-          t('🔒 서버 전송 0% · 내 브라우저에서만 계산', '🔒 100% Local · Never leaves your browser')
+          t('🔒 100% 로컬 처리', '🔒 100% Local')
         )
       );
       container.appendChild(header);
@@ -3188,21 +3356,45 @@
       pasteWrap.appendChild(textarea);
 
       var actionsRow = createEl('div', 'bulk-actions-row');
-      var calcPasteBtn = createEl('button', 'btn btn-primary', t('붙여넣은 표 일괄 계산하기', 'Calculate Pasted Rows'));
+      var calcPasteBtn = createEl('button', 'btn btn-primary', t('붙여넣은 표 계산', 'Calculate Pasted Rows'));
       calcPasteBtn.type = 'button';
       calcPasteBtn.addEventListener('click', function () {
         state.pasteText = textarea.value;
         applyParsedRows(parseDelimitedText(state.pasteText), t('붙여넣은 표 데이터', 'Pasted Table Data'));
       });
 
-      var sampleFillBtn = createEl('button', 'btn btn-secondary', t('샘플 데이터로 체험하기', 'Try Sample Data'));
+      var sampleFillBtn = createEl('button', 'btn btn-secondary', t('기본 샘플', 'Sample Data'));
       sampleFillBtn.type = 'button';
       sampleFillBtn.addEventListener('click', function () {
         state.pasteText = getSamplePasteString();
         applyParsedRows(parseDelimitedText(state.pasteText), t('샘플 셀러 매출장부 (4종)', 'Sample Seller Sheet (4 SKUs)'));
       });
 
-      var downloadTplBtn = createEl('button', 'btn btn-outline', t('샘플 엑셀(CSV) 양식 받기', 'Download Sample CSV'));
+      var smartstoreSampleBtn = createEl('button', 'btn btn-outline', t('스마트스토어 샘플', 'SmartStore Sample'));
+      smartstoreSampleBtn.type = 'button';
+      smartstoreSampleBtn.addEventListener('click', function () {
+        state.pasteText = [
+          '상품명\t수량\t정산기준금액\t판매자부담쿠폰할인\t주문관리수수료\t매입원가\t고객부담배송비\t실택배비\t광고비',
+          '코튼 오버핏 티셔츠\t12\t24900\t1000\t5.63\t8900\t3000\t3200\t2500',
+          '린넨 와이드 팬츠\t7\t39900\t2000\t5.63\t15500\t0\t3200\t4500',
+          '특가 양말 5족 세트\t20\t9900\t500\t5.63\t4200\t0\t3000\t2500'
+        ].join('\n');
+        applyParsedRows(parseDelimitedText(state.pasteText), t('스마트스토어 정산 샘플 (3종)', 'SmartStore Export Sample (3 SKUs)'));
+      });
+
+      var coupangSampleBtn = createEl('button', 'btn btn-outline', t('쿠팡 Wing 샘플', 'Coupang Wing Sample'));
+      coupangSampleBtn.type = 'button';
+      coupangSampleBtn.addEventListener('click', function () {
+        state.pasteText = [
+          '옵션명\t판매수량\t판매총액\t판매자할인쿠폰\t서비스이용료\t매입원가\t출고배송비\t건당광고비',
+          '스테인리스 텀블러 500ml\t15\t22900\t1000\t10.8\t7200\t3200\t2000',
+          '초경량 3단 자동우산\t9\t19800\t0\t10.8\t6500\t3200\t3500',
+          '종이호일 200매 묶음\t18\t11900\t500\t10.8\t4800\t3200\t2800'
+        ].join('\n');
+        applyParsedRows(parseDelimitedText(state.pasteText), t('쿠팡 Wing 정산 샘플 (3종)', 'Coupang Wing Sample (3 SKUs)'));
+      });
+
+      var downloadTplBtn = createEl('button', 'btn btn-outline', t('CSV 양식', 'Sample CSV'));
       downloadTplBtn.type = 'button';
       downloadTplBtn.addEventListener('click', function () {
         downloadSampleExcelTemplate();
@@ -3210,6 +3402,8 @@
 
       actionsRow.appendChild(calcPasteBtn);
       actionsRow.appendChild(sampleFillBtn);
+      actionsRow.appendChild(smartstoreSampleBtn);
+      actionsRow.appendChild(coupangSampleBtn);
       actionsRow.appendChild(downloadTplBtn);
 
       if (state.rawRows || state.pasteText) {
@@ -4469,6 +4663,63 @@
     };
   }
 
+  /**
+   * 5. 옵션 추가금 · 묶음할인(1+1 / 무료배송) 마진 시뮬레이터
+   */
+  function calculateBundleOptionMargin(baseInputs, bundleOpts) {
+    var base = normalizeInputs(baseInputs || cloneDefaults());
+    var singleRes = calculateProfit(base);
+    var opts = bundleOpts || {};
+
+    var bundleQty = Math.max(1, Math.round(toFiniteNumber(opts.bundleQty, 2)));
+    var bundleDiscount = Math.max(0, toFiniteNumber(opts.bundleDiscount, 2000));
+    var optionExtraPrice = Math.max(0, toFiniteNumber(opts.optionExtraPrice, 0));
+    var optionExtraCogs = Math.max(0, toFiniteNumber(opts.optionExtraCogs, 0));
+    var freeShippingOnBundle = typeof opts.freeShippingOnBundle === 'boolean' ? opts.freeShippingOnBundle : true;
+
+    var unitList = Math.max(0, base.listPrice + optionExtraPrice);
+    var unitCogs = Math.max(0, base.cogs + optionExtraCogs);
+
+    var bundleInput = Object.assign({}, base, {
+      listPrice: unitList * bundleQty,
+      cogs: unitCogs * bundleQty,
+      sellerDiscount: base.sellerDiscount * bundleQty + bundleDiscount,
+      platformDiscount: base.platformDiscount * bundleQty,
+      customerShipping: freeShippingOnBundle ? 0 : base.customerShipping,
+      sellerShippingCost: base.sellerShippingCost,
+      adSpend: base.adSpend,
+      customFeeBase: base.feeBasisMode === 'custom_basis' ? base.customFeeBase * bundleQty : base.customFeeBase
+    });
+
+    var bundleRes = calculateProfit(bundleInput);
+    var singleEquivalentTotalProfit = singleRes.operatingProfit * bundleQty;
+    var profitDeltaVsSingleOrders = bundleRes.operatingProfit - singleEquivalentTotalProfit;
+    var savedShippingCost = Math.max(0, (bundleQty - 1) * base.sellerShippingCost);
+
+    return {
+      inputs: {
+        bundleQty: bundleQty,
+        bundleDiscount: bundleDiscount,
+        optionExtraPrice: optionExtraPrice,
+        optionExtraCogs: optionExtraCogs,
+        freeShippingOnBundle: freeShippingOnBundle
+      },
+      singleUnitProfit: singleRes.operatingProfit,
+      singleMarginRate: singleRes.netMarginRate,
+      singleUnitLabel: singleRes.netMarginLabel,
+      bundleOrderProfit: bundleRes.operatingProfit,
+      bundlePerUnitProfit: bundleRes.operatingProfit / bundleQty,
+      bundleMarginRate: bundleRes.netMarginRate,
+      bundleMarginLabel: bundleRes.netMarginLabel,
+      bundleRevenue: bundleRes.recognizedRevenue,
+      bundleSettlement: bundleRes.platformSettlement,
+      profitDeltaVsSingleOrders: profitDeltaVsSingleOrders,
+      savedShippingCost: savedShippingCost,
+      singleResult: singleRes,
+      bundleResult: bundleRes
+    };
+  }
+
   var SHARE_PARAM_MAP = [
     ['s_nm', 'itemName', 'str'],
     ['s_lp', 'listPrice', 'num'],
@@ -4770,14 +5021,22 @@
         earlyPayDailyFeeRatePct: 0.035,
         loanAmountKrw: 20000000,
         loanAnnualRatePct: 6.5
+      },
+      bundleInputs: {
+        bundleQty: 2,
+        bundleDiscount: 2000,
+        optionExtraPrice: 3000,
+        optionExtraCogs: 1200,
+        freeShippingOnBundle: true
       }
     };
 
     var tabsSpec = [
-      { key: 'markets', ko: '🏪 7대 마켓 수익 비교', en: '🏪 7 Marketplaces Compare' },
-      { key: 'import', ko: '🚢 중국 사입·관부가세 원가', en: '🚢 Import COGS & Customs' },
-      { key: 'risk', ko: '📦 반품률·재고 손익분기', en: '📦 Return & Inventory BEP' },
-      { key: 'financing', ko: '💳 선정산·대출이자 분석', en: '💳 Early Payout vs Loan' }
+      { key: 'markets', ko: '🏪 7대 마켓 비교', en: '🏪 7 Markets' },
+      { key: 'import', ko: '🚢 중국 사입·관부가세', en: '🚢 Import COGS' },
+      { key: 'risk', ko: '📦 반품·재고 손익', en: '📦 Return Risk' },
+      { key: 'financing', ko: '💳 선정산·대출이자', en: '💳 Financing' },
+      { key: 'bundle', ko: '🎁 옵션·묶음 마진', en: '🎁 Option & Bundle' }
     ];
 
     function makeField(labelText, inputType, val, stepVal, onInputCb, selectOptions) {
@@ -5211,6 +5470,105 @@
         fGrid.appendChild(fResCol);
         paneContainer.appendChild(fGrid);
         updateFinRes();
+        return;
+      }
+
+      if (state.activeTab === 'bundle') {
+        var bGrid = createEl('div', 'workbench-grid');
+        var bForm = createEl('div', 'form-grid');
+        var bResCol = createEl('div');
+
+        function updateBundleRes() {
+          clearEl(bResCol);
+          var bRes = calculateBundleOptionMargin(getBase(), state.bundleInputs);
+          var kpiG = createEl('div', 'kpi-grid');
+          kpiG.appendChild(
+            makeResultBox(
+              t('옵션·묶음 1주문 순이익', 'Bundle / Option Order Profit'),
+              formatCurrency(bRes.bundleOrderProfit),
+              t('순마진율 ', 'Net Margin ') + bRes.bundleMarginLabel,
+              bRes.bundleOrderProfit >= 0 ? 'positive' : 'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('개당 환산 순이익', 'Profit per Unit in Bundle'),
+              formatCurrency(bRes.bundlePerUnitProfit),
+              t('단품 1개 기준 ', 'Single unit: ') + formatCurrency(bRes.singleUnitProfit),
+              'highlight'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('단품 ' + bRes.inputs.bundleQty + '건 개별 주문 대비 증감', 'vs ' + bRes.inputs.bundleQty + ' Separate Single Orders'),
+              (bRes.profitDeltaVsSingleOrders >= 0 ? '+' : '') + formatCurrency(bRes.profitDeltaVsSingleOrders),
+              t('합포장 택배 절감 ', 'Courier saved ') + formatCurrency(bRes.savedShippingCost),
+              bRes.profitDeltaVsSingleOrders >= 0 ? 'positive' : 'negative'
+            )
+          );
+          kpiG.appendChild(
+            makeResultBox(
+              t('묶음 1주문 정산 예정액', 'Bundle Est. Payout'),
+              formatCurrency(bRes.bundleSettlement),
+              t('순매출 ', 'Net Rev ') + formatCurrency(bRes.bundleRevenue),
+              ''
+            )
+          );
+          bResCol.appendChild(kpiG);
+
+          var bNote = bRes.profitDeltaVsSingleOrders >= 0
+            ? t(
+                '묶음/옵션 업셀 구조로 ' + bRes.inputs.bundleQty + '개 개별 주문 대비 주문당 ' + formatCurrency(bRes.profitDeltaVsSingleOrders) + ' 추가 이익이 발생합니다.',
+                'Bundling outperforms ' + bRes.inputs.bundleQty + ' single orders by +' + formatCurrency(bRes.profitDeltaVsSingleOrders) + ' per order.'
+              )
+            : t(
+                '할인액 및 무료배송 전환 부담으로 개별 판매 대비 ' + formatCurrency(Math.abs(bRes.profitDeltaVsSingleOrders)) + ' 손해 구간입니다. 묶음 할인을 줄여보세요.',
+                'Current discount/free shipping reduces profit by ' + formatCurrency(Math.abs(bRes.profitDeltaVsSingleOrders)) + ' vs separate single orders.'
+              );
+          bResCol.appendChild(createEl('div', 'tax-comp-note', bNote));
+        }
+
+        bForm.appendChild(
+          makeField(t('묶음 구매 수량 (개)', 'Bundle Quantity'), 'number', state.bundleInputs.bundleQty, '1', function (v) {
+            state.bundleInputs.bundleQty = Number(v);
+            updateBundleRes();
+          })
+        );
+        bForm.appendChild(
+          makeField(t('묶음 추가 할인액 (원)', 'Bundle Extra Discount (KRW)'), 'number', state.bundleInputs.bundleDiscount, '100', function (v) {
+            state.bundleInputs.bundleDiscount = Number(v);
+            updateBundleRes();
+          })
+        );
+        bForm.appendChild(
+          makeField(t('개당 옵션 추가 판매가 (원)', 'Option Price Add-on / Unit (KRW)'), 'number', state.bundleInputs.optionExtraPrice, '100', function (v) {
+            state.bundleInputs.optionExtraPrice = Number(v);
+            updateBundleRes();
+          })
+        );
+        bForm.appendChild(
+          makeField(t('개당 옵션 추가 원가 (원)', 'Option COGS Add-on / Unit (KRW)'), 'number', state.bundleInputs.optionExtraCogs, '100', function (v) {
+            state.bundleInputs.optionExtraCogs = Number(v);
+            updateBundleRes();
+          })
+        );
+
+        var freeShipLabel = createEl('label', 'checkbox-row');
+        var freeShipCb = createEl('input');
+        freeShipCb.type = 'checkbox';
+        freeShipCb.checked = state.bundleInputs.freeShippingOnBundle;
+        freeShipCb.addEventListener('change', function () {
+          state.bundleInputs.freeShippingOnBundle = freeShipCb.checked;
+          updateBundleRes();
+        });
+        freeShipLabel.appendChild(freeShipCb);
+        freeShipLabel.appendChild(createEl('span', '', t('묶음 구매 시 무료배송 적용', 'Free shipping on bundle orders')));
+        bForm.appendChild(freeShipLabel);
+
+        bGrid.appendChild(bForm);
+        bGrid.appendChild(bResCol);
+        paneContainer.appendChild(bGrid);
+        updateBundleRes();
       }
     }
 
@@ -5222,16 +5580,16 @@
         createEl(
           'h2',
           'card-title',
-          t('셀러 실전 확장 워크벤치 (마켓 비교 · 사입 원가 · 반품/재고 · 선정산 분석)', 'Seller Operational Workbench (Markets · Import COGS · Returns · Financing)')
+          t('셀러 실전 확장 시뮬레이터', 'Seller Operational Workbench')
         )
       );
       titleBox.appendChild(
         createEl(
           'p',
-          'card-subtitle',
+          'card-subtitle workbench-desc',
           t(
-            '상단 계산기 입력값과 실시간 연동되어 7개 마켓 손익, 1688 수입 관부가세 원가, 반품·재고 본전 수량, 선정산 마진 잠식을 즉시 시뮬레이션합니다.',
-            'Synced in real time with your active inputs: compare 7 markets, calculate landed import COGS, return/inventory break-even, and financing fees.'
+            '7대 마켓 손익, 수입 관부가세 원가, 반품·재고 본전, 선정산 이자, 옵션·묶음 마진을 즉시 계산합니다.',
+            'Simulate 7 markets, import landed cost, return risk, financing, and bundle/option margins.'
           )
         )
       );
@@ -5296,10 +5654,12 @@
     calculateImportCogs: calculateImportCogs,
     calculateReturnAndInventoryRisk: calculateReturnAndInventoryRisk,
     calculateFinancingImpact: calculateFinancingImpact,
+    calculateBundleOptionMargin: calculateBundleOptionMargin,
     buildShareUrl: buildShareUrl,
     parseShareUrlParams: parseShareUrlParams,
     downloadReportCardPng: downloadReportCardPng,
     mountSellerWorkbench: mountSellerWorkbench,
+    renderRevenueSplitBar: renderRevenueSplitBar,
     getLang: getLang,
     setLang: setLang,
     t: t,

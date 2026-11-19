@@ -65,12 +65,12 @@
         <span class="brand-sub">쇼핑몰 정산 · 마진 · ROAS 계산기</span>
       </a>
       <nav class="main-nav" aria-label="주 메뉴">
-        <a class="nav-link" href="index.html">종합 대시보드</a>
-        <a class="nav-link" href="profit-calculator.html">순이익·정산 계산기</a>
-        <a class="nav-link" href="roas-calculator.html">손익분기 ROAS</a>
-        <a class="nav-link" href="selling-price-calculator.html">판매가 역산기</a>
-        <a class="nav-link active" href="tax-calculator.html">세무·과세 진단기</a>
-        <a class="nav-link" href="legal.html">약관·개인정보·면책</a>
+        <a class="nav-link" href="index.html">대시보드</a>
+        <a class="nav-link" href="profit-calculator.html">순이익</a>
+        <a class="nav-link" href="roas-calculator.html">ROAS</a>
+        <a class="nav-link" href="selling-price-calculator.html">판매가 역산</a>
+        <a class="nav-link active" href="tax-calculator.html">세무 진단</a>
+        <a class="nav-link" href="legal.html">약관</a>
       </nav>
     </div>
   </header>
@@ -94,10 +94,10 @@
       <section class="card" aria-label="정산 캡처 사진 및 엑셀 간편 입력">
         <div class="bulk-excel-header">
           <div>
-            <h2 class="card-title">1단계: 정산 캡처 사진 또는 매출 엑셀로 3초 입력</h2>
+            <h2 class="card-title">1단계: 캡처 사진 · 엑셀 간편 입력</h2>
             <p class="card-subtitle">사진이나 엑셀이 없다면 아래 원클릭 셀러 예시 또는 기존 계산기 데이터를 바로 불러올 수 있습니다.</p>
           </div>
-          <span class="bulk-privacy-badge">🔒 과금 가능성 0% · 외부 AI/서버 전송 없음 (브라우저 로컬 연산)</span>
+          <span class="bulk-privacy-badge">🔒 100% 로컬 처리</span>
         </div>
 
         <div class="tax-intake-grid">
@@ -154,11 +154,11 @@
             <div id="tax-excel-status" class="status-pill status-positive" hidden></div>
 
             <div class="preset-pill-row">
-              <button type="button" class="btn btn-primary btn-table-sm" id="btn-sync-profit-calc">현재 순이익 계산기(연환산) 불러오기</button>
-              <button type="button" class="btn btn-secondary btn-table-sm" id="btn-preset-36m">예시: 연 3,600만(납부면제)</button>
-              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-84m">예시: 연 8,400만(간이)</button>
-              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-150m">예시: 연 1.5억(일반전환)</button>
-              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-450m">예시: 연 4.5억(복식부기)</button>
+              <button type="button" class="btn btn-primary btn-table-sm" id="btn-sync-profit-calc">현재 계산기 연환산</button>
+              <button type="button" class="btn btn-secondary btn-table-sm" id="btn-preset-36m">연 3,600만(면제)</button>
+              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-84m">연 8,400만(간이)</button>
+              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-150m">연 1.5억(일반)</button>
+              <button type="button" class="btn btn-outline btn-table-sm" id="btn-preset-450m">연 4.5억(복식)</button>
             </div>
           </div>
         </div>
@@ -250,7 +250,7 @@
               </div>
             </div>
 
-            <details class="advanced-vat-panel" open>
+            <details class="advanced-vat-panel">
               <summary>3. 공제 · 증빙 · 소득공제 세부 조건 (세무사 정밀 계산)</summary>
               <div class="advanced-vat-body">
                 <div class="form-grid-2">
@@ -291,9 +291,9 @@
           </form>
 
           <div class="btn-row" style="margin-top: 16px;">
-            <button type="button" class="btn btn-primary" id="btn-copy-tax-summary">세무 진단 요약 복사</button>
-            <button type="button" class="btn btn-outline" id="btn-download-tax-png">세무 리포트 이미지(PNG) 저장</button>
-            <button type="button" class="btn btn-ghost" id="btn-print-tax">인쇄 / PDF 저장</button>
+            <button type="button" class="btn btn-primary" id="btn-copy-tax-summary">요약 복사</button>
+            <button type="button" class="btn btn-outline" id="btn-download-tax-png">PNG 리포트</button>
+            <button type="button" class="btn btn-ghost" id="btn-print-tax">인쇄</button>
           </div>
           <div id="tax-action-toast" class="toast-msg" hidden role="status" aria-live="polite"></div>
         </section>
@@ -407,8 +407,10 @@
 
       var PAGE_DICT = {
         '셀러 세무 · 과세유형 · 신고방법 통합 진단기': 'Korean Seller Tax, VAT & Filing Diagnostic Tool',
+        '1단계: 캡처 사진 · 엑셀 간편 입력': 'Step 1: 3-Second Screenshot or Excel Input',
         '1단계: 정산 캡처 사진 또는 매출 엑셀로 3초 입력': 'Step 1: 3-Second Input via Screenshot or Excel Sheet',
         '사진이나 엑셀이 없다면 아래 원클릭 셀러 예시 또는 기존 계산기 데이터를 바로 불러올 수 있습니다.': 'Or load realistic seller presets or your active Profit Calculator inputs in one click.',
+        '🔒 100% 로컬 처리': '🔒 100% Local',
         '🔒 과금 가능성 0% · 외부 AI/서버 전송 없음 (브라우저 로컬 연산)': '🔒 Zero Cost Guaranteed · 100% Browser Local (No Paid OCR/Server)',
         '📸 정산·매출 캡처 사진 넣기 (파일 또는 Ctrl+V)': '📸 Settlement Screenshot Input (Drop or Ctrl+V)',
         '클릭해 캡처 이미지 선택 · 드래그 · Ctrl+V': 'Click to choose screenshot · Drag & Drop · Ctrl+V',
@@ -416,6 +418,11 @@
         '📊 매출·정산 엑셀(.xlsx · .csv) 자동 합산 입력': '📊 Excel (.xlsx / .csv) Auto-Sum Tax Input',
         '여기를 클릭하거나 .xlsx · .csv 파일을 끌어다 놓으세요': 'Click or drag & drop .xlsx / .csv sheet here',
         '단일 주문 장부·품목별 수량 시트 모두 합계 자동 계산': 'Auto-sums single orders or SKU quantity sheets',
+        '현재 계산기 연환산': 'Sync Profit Calc (×12)',
+        '연 3,600만(면제)': '36M (Exempt)',
+        '연 8,400만(간이)': '84M (Simplified)',
+        '연 1.5억(일반)': '150M (General)',
+        '연 4.5억(복식)': '450M (Double-Entry)',
         '현재 순이익 계산기(연환산) 불러오기': 'Load Profit Calculator (×12 Mos)',
         '예시: 연 3,600만(납부면제)': 'Preset: 36M KRW (VAT Exempt)',
         '예시: 연 8,400만(간이)': 'Preset: 84M KRW (Simplified)',

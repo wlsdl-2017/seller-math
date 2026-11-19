@@ -106,3 +106,18 @@
   - **보조 텍스트 노이즈 축소:** 1만 원 미만 금액 입력칸 하단 중복 한글 단위 표기(`= 0원`, `= 500원` 등) 숨김 처리 및 7대 마켓 프리셋 버튼명 단축(`스마트스토어`, `쿠팡 일반` 등)
   - **점진적 노출(Progressive Disclosure):** 부가세 세부 가정 문구 `<details>` 축약 및 `mountProgressiveDrawers()` 적용으로 2차 도구(확장 시뮬레이터·엑셀 일괄·시나리오 비교함)와 긴 상세 가이드·FAQ를 초기 1줄 접힘 카드로 정리(`#btn-save-scenario` 클릭 및 `#hash` 이동 시 자동 펼침)
 - **사전 QA 검증:** `qa_verify.js` **13 / 13 PASS**, 인라인 JS 구문 **7 / 7 SYNTAX_OK**, DOM ID 무결성 **7 / 7 누락 없음**
+
+
+---
+
+### [전면 개편·기능 추가] 2026-11-19 — Tactile Fintech Studio 디자인 전면 개편, 텍스트 다이어트 & 실전 기능 3종 추가 (비용 0원)
+- **전면 디자인 개편 (`style.css`, 7개 HTML):**
+  - **Obsidian Floating Header:** 다크 옵시디언 글래스 내비게이션 바 + 간결한 6개 메뉴(`대시보드 · 순이익 · ROAS · 판매가 역산 · 세무 진단 · 약관`)
+  - **Compact Studio Header & 텍스트 다이어트:** 히어로 영역을 1줄 슬림 바로 압축하고 불필요한 반복 설명 문구(`.hero-desc`, 보조 `.card-subtitle`, `.tax-intake-desc` 등) 및 장황한 라벨을 정리, 메인 허브를 4열 컴팩트 Bento 그리드로 재구성
+  - **고대비 시그니처 KPI:** 1단계 정산액 다크 네이비(`#0f172a`) 카드 및 순이익 에메랄드(`#ecfdf5`) 카드로 즉각적 시선 위계 구축
+  - **점진적 노출 확대 (`common.js` `mountProgressiveDrawers`):** 메인 공식 요약표(`#formula-summary-card`), ROAS·판매가역산 워터폴 검증, 세무 8단계 누진세율표·신고 캘린더, 세무 세부 공제 패널을 기본 접힘 처리
+- **신규 기능 3종 추가 (`common.js`, `index.html`, `profit-calculator.html`):**
+  1. **실시간 매출 구성비 컬러 스플릿 바 (`renderRevenueSplitBar`):** 매출 대비 원가·수수료·택배/광고비·순이익 비중(%) 시각화 및 메인 대시보드 **3초 즉석 미니 계산기 바**(`#quick-listPrice`, `#quick-cogs`, `#quick-feeRate`, `#quick-adSpend`) 연동
+  2. **옵션 추가금 · 묶음할인(1+1/무료배송) 마진 시뮬레이터 (`calculateBundleOptionMargin`):** 워크벤치 5번째 탭(`🎁 옵션·묶음 마진`)으로 개별 주문 대비 순이익 증감·합포장 택배 절감액 실시간 계산
+  3. **스마트스토어·쿠팡 Wing 정산 엑셀 헤더 인식 확장 & 원클릭 샘플:** `정산기준금액`·`주문관리수수료`·`판매총액`·`서비스이용료` 자동 매핑 및 전용 샘플 데이터 로드 버튼 추가
+- **사전 QA 검증:** `qa_verify.js` **13 / 13 PASS**, 신규 기능·매핑 검증 **PASS**, 인라인 JS 구문 **7 / 7 SYNTAX_OK**, DOM ID 무결성 **7 / 7 누락 없음**
